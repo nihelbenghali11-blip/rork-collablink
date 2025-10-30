@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useCampaigns } from "@/contexts/CampaignContext";
 import { useUser } from "@/contexts/UserContext";
+import { trpc } from "@/lib/trpc";
 
 export default function CreateCampaignPage() {
   const { t } = useLanguage();
@@ -42,6 +43,8 @@ export default function CreateCampaignPage() {
 
   const currencyOptions = ["EUR", "USD", "GBP", "TND", "MAD", "AED"];
 
+  const createMutation = trpc.campaigns.create.useMutation();
+
   const handleSubmit = async () => {
     if (!campaignName.trim()) {
       Alert.alert(t("common.error"), "Please enter a campaign name");
@@ -64,6 +67,22 @@ export default function CreateCampaignPage() {
     try {
       const platformNames = platforms.map((pId) => platformOptions.find((p) => p.id === pId)?.name || pId).join(", ");
       
+      const platformsFormatted = platforms.map((pId) => {
+        const found = platformOptions.find((p) => p.id === pId);
+        return found?.name || pId;
+      }) as ("Instagram" | "TikTok" | "Facebook" | "Snapchat")[];
+
+      const result = await createMutation.mutateAsync({
+        name: campaignName,
+        brand_name: brandProfile.companyName,
+        status: "active",
+        revenue_amount: parseFloat(budget),
+        revenue_currency: currency,
+        start_date: new Date().toISOString().split('T')[0],
+        description: description || "",
+        platforms: platformsFormatted,
+      });
+
       await addCampaign({
         name: campaignName,
         brandId: brandProfile.id,
@@ -80,16 +99,7 @@ export default function CreateCampaignPage() {
         hashtags: hashtags || "",
       });
 
-      Alert.alert(
-        t("common.success"),
-        t("campaign.campaignCreated"),
-        [
-          {
-            text: "OK",
-            onPress: () => router.back(),
-          },
-        ]
-      );
+      router.push(`/campaign-details?id=${result.id}`);
     } catch (error) {
       console.error("Failed to create campaign:", error);
       Alert.alert(t("common.error"), "Failed to create campaign");

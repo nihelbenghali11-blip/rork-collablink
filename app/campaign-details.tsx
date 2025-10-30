@@ -15,6 +15,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { useCampaigns } from "@/contexts/CampaignContext";
 import { useUser } from "@/contexts/UserContext";
 import { Collaborator } from "@/mocks/data";
+import { trpc } from "@/lib/trpc";
 
 const CURRENCIES = ["EUR", "USD", "GBP", "TND", "MAD", "AED"];
 
@@ -38,6 +39,11 @@ export default function CampaignDetailsPage() {
   const { userType } = useUser();
 
   const campaign = campaigns.find((c) => c.id === id);
+
+  const collaboratorsQuery = trpc.collaborators.list.useQuery(
+    { campaign_id: campaign?.id || "" },
+    { enabled: !!campaign?.id }
+  );
 
   const [collaborators, setCollaborators] = useState<Collaborator[]>(
     campaign?.collaborators || []
@@ -79,58 +85,106 @@ export default function CampaignDetailsPage() {
 
   const totalSpent = collaborators.reduce((sum, c) => sum + c.amount, 0);
 
-  const handleAddCollaborator = () => {
+  const createCollaboratorMutation = trpc.collaborators.create.useMutation();
+
+  const handleAddCollaborator = async () => {
     if (!formData.firstName || !formData.lastName || !formData.phone || !formData.amount) {
       return;
     }
 
-    const newCollaborator: Collaborator = {
-      id: Date.now().toString(),
-      firstName: formData.firstName,
-      lastName: formData.lastName,
-      phone: formData.phone,
-      amount: parseFloat(formData.amount),
-      currency: formData.currency,
-    };
+    try {
+      const result = await createCollaboratorMutation.mutateAsync({
+        campaign_id: campaign.id,
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+        phone: formData.phone,
+        agreed_amount: parseFloat(formData.amount),
+        currency: formData.currency,
+        ad_status: "Active",
+      });
 
-    const updatedCollaborators = [...collaborators, newCollaborator];
-    setCollaborators(updatedCollaborators);
-    updateCampaign(campaign.id, { collaborators: updatedCollaborators });
+      const newCollaborator: Collaborator = {
+        id: result.id,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        phone: formData.phone,
+        amount: parseFloat(formData.amount),
+        currency: formData.currency,
+      };
 
-    setFormData({ firstName: "", lastName: "", phone: "", amount: "", currency: "EUR" });
-    setShowAddModal(false);
+      const updatedCollaborators = [...collaborators, newCollaborator];
+      setCollaborators(updatedCollaborators);
+      updateCampaign(campaign.id, { collaborators: updatedCollaborators });
+
+      setFormData({ firstName: "", lastName: "", phone: "", amount: "", currency: "EUR" });
+      setShowAddModal(false);
+      
+      await collaboratorsQuery.refetch();
+    } catch (error) {
+      console.error("Failed to add collaborator:", error);
+      Alert.alert(t("common.error"), "Failed to add collaborator");
+    }
   };
 
-  const handleEditCollaborator = () => {
+  const updateCollaboratorMutation = trpc.collaborators.update.useMutation();
+
+  const handleEditCollaborator = async () => {
     if (!editingId || !formData.firstName || !formData.lastName || !formData.phone || !formData.amount) {
       return;
     }
 
-    const updatedCollaborators = collaborators.map((c) =>
-      c.id === editingId
-        ? {
-            ...c,
-            firstName: formData.firstName,
-            lastName: formData.lastName,
-            phone: formData.phone,
-            amount: parseFloat(formData.amount),
-            currency: formData.currency,
-          }
-        : c
-    );
+    try {
+      await updateCollaboratorMutation.mutateAsync({
+        id: editingId,
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+        phone: formData.phone,
+        agreed_amount: parseFloat(formData.amount),
+        currency: formData.currency,
+      });
 
-    setCollaborators(updatedCollaborators);
-    updateCampaign(campaign.id, { collaborators: updatedCollaborators });
+      const updatedCollaborators = collaborators.map((c) =>
+        c.id === editingId
+          ? {
+              ...c,
+              firstName: formData.firstName,
+              lastName: formData.lastName,
+              phone: formData.phone,
+              amount: parseFloat(formData.amount),
+              currency: formData.currency,
+            }
+          : c
+      );
 
-    setFormData({ firstName: "", lastName: "", phone: "", amount: "", currency: "EUR" });
-    setEditingId(null);
-    setShowAddModal(false);
+      setCollaborators(updatedCollaborators);
+      updateCampaign(campaign.id, { collaborators: updatedCollaborators });
+
+      setFormData({ firstName: "", lastName: "", phone: "", amount: "", currency: "EUR" });
+      setEditingId(null);
+      setShowAddModal(false);
+      
+      await collaboratorsQuery.refetch();
+    } catch (error) {
+      console.error("Failed to update collaborator:", error);
+      Alert.alert(t("common.error"), "Failed to update collaborator");
+    }
   };
 
-  const handleDeleteCollaborator = (id: string) => {
-    const updatedCollaborators = collaborators.filter((c) => c.id !== id);
-    setCollaborators(updatedCollaborators);
-    updateCampaign(campaign.id, { collaborators: updatedCollaborators });
+  const deleteCollaboratorMutation = trpc.collaborators.delete.useMutation();
+
+  const handleDeleteCollaborator = async (id: string) => {
+    try {
+      await deleteCollaboratorMutation.mutateAsync({ id });
+      
+      const updatedCollaborators = collaborators.filter((c) => c.id !== id);
+      setCollaborators(updatedCollaborators);
+      updateCampaign(campaign.id, { collaborators: updatedCollaborators });
+      
+      await collaboratorsQuery.refetch();
+    } catch (error) {
+      console.error("Failed to delete collaborator:", error);
+      Alert.alert(t("common.error"), "Failed to delete collaborator");
+    }
   };
 
   const openEditModal = (collaborator: Collaborator) => {
@@ -151,6 +205,8 @@ export default function CampaignDetailsPage() {
     setFormData({ firstName: "", lastName: "", phone: "", amount: "", currency: "EUR" });
   };
 
+  const deleteMutation = trpc.campaigns.delete.useMutation();
+
   const handleDeleteCampaign = () => {
     Alert.alert(
       t("campaign.deleteCampaign"),
@@ -161,8 +217,14 @@ export default function CampaignDetailsPage() {
           text: t("common.delete"),
           style: "destructive",
           onPress: async () => {
-            await deleteCampaign(campaign.id);
-            router.back();
+            try {
+              await deleteMutation.mutateAsync({ id: campaign.id });
+              await deleteCampaign(campaign.id);
+              router.back();
+            } catch (error) {
+              console.error("Failed to delete campaign:", error);
+              Alert.alert(t("common.error"), "Failed to delete campaign");
+            }
           },
         },
       ]

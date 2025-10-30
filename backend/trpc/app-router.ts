@@ -6,6 +6,9 @@ import listActiveByOwner from "./routes/campaigns/listActiveByOwner";
 import updateCampaign from "./routes/campaigns/update";
 import deleteCampaign from "./routes/campaigns/delete";
 import createCollaborator from "./routes/collaborators/create";
+import listCollaborators from "./routes/collaborators/list";
+import updateCollaborator from "./routes/collaborators/update";
+import deleteCollaborator from "./routes/collaborators/delete";
 import openConversation from "./routes/messaging/openConversation";
 import listConversations from "./routes/messaging/listConversations";
 import sendMessage from "./routes/messaging/sendMessage";
@@ -28,6 +31,9 @@ export const appRouter = createTRPCRouter({
   }),
   collaborators: createTRPCRouter({
     create: createCollaborator,
+    list: listCollaborators,
+    update: updateCollaborator,
+    delete: deleteCollaborator,
   }),
   messaging: createTRPCRouter({
     openConversation,
