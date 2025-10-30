@@ -1,6 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import createContextHook from "@nkzw/create-context-hook";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { setTRPCUserId } from "@/lib/trpc";
 
 export type UserType = "brand" | "influencer" | null;
 
@@ -140,6 +141,10 @@ export const [UserProvider, useUser] = createContextHook(() => {
     }
     return null;
   }, [userType, brandProfile, influencerProfile]);
+
+  useEffect(() => {
+    setTRPCUserId(currentUserId);
+  }, [currentUserId]);
 
   return useMemo(() => ({
     userType,

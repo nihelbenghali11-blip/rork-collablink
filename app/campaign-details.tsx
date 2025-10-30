@@ -89,10 +89,13 @@ export default function CampaignDetailsPage() {
 
   const handleAddCollaborator = async () => {
     if (!formData.firstName || !formData.lastName || !formData.phone || !formData.amount) {
+      Alert.alert(t("common.error"), "Veuillez remplir tous les champs obligatoires");
       return;
     }
 
     try {
+      console.log("[handleAddCollaborator] Starting to add collaborator for campaign:", campaign.id);
+      
       const result = await createCollaboratorMutation.mutateAsync({
         campaign_id: campaign.id,
         first_name: formData.firstName,
@@ -102,6 +105,8 @@ export default function CampaignDetailsPage() {
         currency: formData.currency,
         ad_status: "Active",
       });
+
+      console.log("[handleAddCollaborator] Successfully created collaborator:", result.id);
 
       const newCollaborator: Collaborator = {
         id: result.id,
@@ -120,9 +125,10 @@ export default function CampaignDetailsPage() {
       setShowAddModal(false);
       
       await collaboratorsQuery.refetch();
-    } catch (error) {
-      console.error("Failed to add collaborator:", error);
-      Alert.alert(t("common.error"), "Failed to add collaborator");
+    } catch (error: any) {
+      console.error("[handleAddCollaborator] Failed to add collaborator:", error);
+      const errorMessage = error?.message || "Failed to add collaborator: " + (error?.toString() || "Unknown error");
+      Alert.alert(t("common.error"), errorMessage);
     }
   };
 

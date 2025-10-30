@@ -15,13 +15,38 @@ export default protectedProcedure
     })
   )
   .mutation(({ ctx, input }) => {
-    const db = getDB();
-    const campaign = db.campaigns.find((c) => c.id === input.campaign_id && c.deleted_at == null);
-    if (!campaign) throw new Error("Campaign not found");
-    const collabId = id();
-    const now = new Date().toISOString();
-    db.collaborators.push({ id: collabId, created_at: now, updated_at: now, deleted_at: null, ...input });
-    saveDB();
-    logAudit(ctx.userId!, "create", "collaborators", collabId);
-    return { id: collabId };
+    try {
+      console.log("[collaborators.create] Starting mutation with userId:", ctx.userId);
+      console.log("[collaborators.create] Input:", JSON.stringify(input, null, 2));
+      
+      const db = getDB();
+      const campaign = db.campaigns.find((c) => c.id === input.campaign_id && c.deleted_at == null);
+      
+      if (!campaign) {
+        console.error("[collaborators.create] Campaign not found:", input.campaign_id);
+        throw new Error("Campaign not found");
+      }
+      
+      const collabId = id();
+      const now = new Date().toISOString();
+      const newCollaborator = { 
+        id: collabId, 
+        created_at: now, 
+        updated_at: now, 
+        deleted_at: null, 
+        ...input 
+      };
+      
+      console.log("[collaborators.create] Creating collaborator:", JSON.stringify(newCollaborator, null, 2));
+      
+      db.collaborators.push(newCollaborator);
+      saveDB();
+      logAudit(ctx.userId!, "create", "collaborators", collabId);
+      
+      console.log("[collaborators.create] Successfully created collaborator:", collabId);
+      return { id: collabId };
+    } catch (error) {
+      console.error("[collaborators.create] Error:", error);
+      throw error;
+    }
   });
