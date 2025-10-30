@@ -7,6 +7,7 @@ import { LanguageProvider } from "@/contexts/LanguageContext";
 import { UserProvider } from "@/contexts/UserContext";
 import { CampaignProvider } from "@/contexts/CampaignContext";
 import { MessagingProvider } from "@/contexts/MessagingContext";
+import { trpc, trpcClient } from "@/lib/trpc";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -57,18 +58,20 @@ export default function RootLayout() {
   }, [isReady]);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <LanguageProvider>
-        <UserProvider>
-          <CampaignProvider>
-            <MessagingProvider>
-              <GestureHandlerRootView style={{ flex: 1 }}>
-                <RootLayoutNav />
-              </GestureHandlerRootView>
-            </MessagingProvider>
-          </CampaignProvider>
-        </UserProvider>
-      </LanguageProvider>
-    </QueryClientProvider>
+    <trpc.Provider client={trpcClient} queryClient={queryClient}>
+      <QueryClientProvider client={queryClient}>
+        <LanguageProvider>
+          <UserProvider>
+            <CampaignProvider>
+              <MessagingProvider>
+                <GestureHandlerRootView style={{ flex: 1 }}>
+                  <RootLayoutNav />
+                </GestureHandlerRootView>
+              </MessagingProvider>
+            </CampaignProvider>
+          </UserProvider>
+        </LanguageProvider>
+      </QueryClientProvider>
+    </trpc.Provider>
   );
 }
