@@ -1,12 +1,12 @@
 import { z } from "zod";
 import { protectedProcedure } from "@/backend/trpc/create-context";
-import { getDB, saveDB, logAudit } from "@/backend/db";
+import { updateUserProfile, logAudit } from "@/backend/db";
 
 export default protectedProcedure
   .input(
     z.object({
-      name: z.string().min(1),
-      email: z.string().email(),
+      name: z.string().min(1).optional(),
+      email: z.string().email().optional(),
       bio: z.string().optional(),
       phone: z.string().optional(),
       address: z.string().optional(),
@@ -16,16 +16,16 @@ export default protectedProcedure
       tiktok_url: z.string().url().optional(),
       facebook_url: z.string().url().optional(),
       snapchat_url: z.string().url().optional(),
-      primary_platform: z.enum(["Instagram", "TikTok", "YouTube", "Facebook", "Snapchat"]).optional(),
+      primary_platform: z
+        .enum(["Instagram", "TikTok", "YouTube", "Facebook", "Snapchat"])
+        .optional(),
       followers_count: z.number().int().nonnegative().optional(),
     })
   )
-  .mutation(({ ctx, input }) => {
-    const db = getDB();
-    const u = db.users.find((x) => x.id === ctx.userId);
-    if (!u) throw new Error("User not found");
-    Object.assign(u, { ...input, updated_at: new Date().toISOString() });
-    saveDB();
-    logAudit(ctx.userId!, "update", "users", ctx.userId!);
-    return u;
+  .mutation(async ({ ctx, input }) => {
+    const updated = await updateUserProfile(ctx.userId!, input);
+
+    await logAudit(ctx.userId!, "update", "users", ctx.userId!);
+
+    return updated;
   });

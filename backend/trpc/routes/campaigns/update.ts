@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { protectedProcedure } from "@/backend/trpc/create-context";
-import { getDB, saveDB, logAudit } from "@/backend/db";
+import { updateCampaignRow, logAudit } from "@/backend/db";
 
 export default protectedProcedure
   .input(
@@ -11,29 +11,28 @@ export default protectedProcedure
       description: z.string().min(1),
       revenue_amount: z.number().positive(),
       revenue_currency: z.string().min(1),
-      start_date: z.string().optional(),
+      start_date: z.string().optional().nullable(),
       status: z.enum(["active", "closed"]),
-      platforms: z.array(z.enum(["Instagram", "TikTok", "Facebook", "Snapchat"]))
+      platforms: z
+        .array(z.enum(["Instagram", "TikTok", "Facebook", "Snapchat"]))
         .min(1),
     })
   )
-  .mutation(({ ctx, input }) => {
-    const db = getDB();
-    const c = db.campaigns.find((x) => x.id === input.id && x.owner_user_id === ctx.userId);
-    if (!c) throw new Error("Campaign not found");
-    Object.assign(c, {
-      name: input.name,
-      brand_name: input.brand_name,
-      description: input.description,
-      revenue_amount: input.revenue_amount,
-      revenue_currency: input.revenue_currency,
-      start_date: input.start_date,
-      status: input.status,
-      updated_at: new Date().toISOString(),
+  .mutation(async ({ ctx, input }) => {
+    const { id, ...rest } = input;
+
+    const updated = await updateCampaignRow(id, {
+      name: rest.name,
+      brand_name: rest.brand_name,
+      description: rest.description,
+      revenue_amount: rest.revenue_amount,
+      revenue_currency: rest.revenue_currency,
+      start_date: rest.start_date ?? null,
+      status: rest.status,
+      platforms: rest.platforms,
     });
-    db.campaign_platforms = db.campaign_platforms.filter((cp) => cp.campaign_id !== c.id);
-    for (const p of input.platforms) db.campaign_platforms.push({ campaign_id: c.id, platform: p });
-    saveDB();
-    logAudit(ctx.userId!, "update", "campaigns", c.id);
-    return c;
+
+    await logAudit(ctx.userId!, "update", "campaigns", id);
+
+    return updated;
   });

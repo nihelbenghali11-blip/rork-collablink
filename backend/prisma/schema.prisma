@@ -1,0 +1,193 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  brand
+  influencer
+}
+
+enum CampaignStatus {
+  active
+  closed
+}
+
+enum CollaboratorStatus {
+  Active
+  Terminée
+}
+
+enum PlatformName {
+  Instagram
+  TikTok
+  YouTube
+  Facebook
+  Snapchat
+}
+
+model User {
+  id               String        @id
+  role             UserRole
+  name             String
+  email            String        @unique
+  password_hash    String
+  phone            String?
+  address          String?
+  website          String?
+  bio              String?
+  sector           String?
+  avatar_url       String?
+  default_currency String?
+  rating_avg       Float?
+  instagram_url    String?
+  tiktok_url       String?
+  facebook_url     String?
+  snapchat_url     String?
+  primary_platform PlatformName?
+  followers_count  Int?
+  created_at       DateTime
+  updated_at       DateTime
+  deleted_at       DateTime?
+
+  // campaigns this user owns
+  campaigns_owned Campaign[] @relation("CampaignOwner")
+
+  // messages they sent
+  messages_sent Message[] @relation("MessageSender")
+
+  // ratings they gave / received
+  ratings_given    Rating[] @relation("RatingByUser")
+  ratings_received Rating[] @relation("RatingToUser")
+
+  // audit logs
+  audit_logs AuditLog[] @relation("UserAuditLogs")
+
+  // conversations (as user_a / user_b)
+  conversationsAsA Conversation[] @relation("ConversationUserA")
+  conversationsAsB Conversation[] @relation("ConversationUserB")
+}
+
+model Campaign {
+  id               String         @id
+  owner_user_id    String
+  name             String
+  brand_name       String
+  description      String
+  revenue_amount   Float
+  revenue_currency String
+  start_date       String?
+  status           CampaignStatus
+  created_at       DateTime
+  updated_at       DateTime
+  deleted_at       DateTime?
+
+  owner         User               @relation("CampaignOwner", fields: [owner_user_id], references: [id], onDelete: Cascade)
+  platforms     CampaignPlatform[]
+  collaborators Collaborator[]
+  ratings       Rating[]
+}
+
+model CampaignPlatform {
+  campaign_id String
+  platform    PlatformName
+  created_at  DateTime
+  updated_at  DateTime
+
+  campaign Campaign @relation(fields: [campaign_id], references: [id], onDelete: Cascade)
+
+  @@id([campaign_id, platform])
+}
+
+model Collaborator {
+  id            String             @id
+  campaign_id   String
+  first_name    String
+  last_name     String
+  phone         String?
+  agreed_amount Float
+  currency      String
+  ad_status     CollaboratorStatus
+  created_at    DateTime
+  updated_at    DateTime
+  deleted_at    DateTime?
+
+  campaign Campaign @relation(fields: [campaign_id], references: [id], onDelete: Cascade)
+}
+
+model Conversation {
+  id              String    @id
+  user_a_id       String
+  user_b_id       String
+  last_message_at DateTime?
+  unread_a        Int?
+  unread_b        Int?
+  created_at      DateTime
+  updated_at      DateTime
+  deleted_at      DateTime?
+
+  // link to each participant
+  userA User @relation("ConversationUserA", fields: [user_a_id], references: [id], onDelete: Cascade)
+  userB User @relation("ConversationUserB", fields: [user_b_id], references: [id], onDelete: Cascade)
+
+  messages Message[]
+}
+
+model Message {
+  id              String    @id
+  conversation_id String
+  sender_id       String
+  content         String
+  attachment_id   String?   @unique
+  created_at      DateTime
+  read_at         DateTime?
+  deleted_at      DateTime?
+
+  conversation Conversation @relation(fields: [conversation_id], references: [id], onDelete: Cascade)
+  sender       User         @relation("MessageSender", fields: [sender_id], references: [id], onDelete: Cascade)
+
+  // 1-to-1 optional attachment
+  attachment Attachment? @relation(fields: [attachment_id], references: [id])
+}
+
+model Attachment {
+  id          String   @id
+  file_name   String
+  mime_type   String
+  size        Int
+  storage_url String
+  created_at  DateTime
+
+  // reverse of Message.attachment
+  message Message?
+}
+
+model Rating {
+  id            String   @id
+  campaign_id   String
+  rater_user_id String
+  ratee_user_id String
+  score         Int
+  comment       String?
+  created_at    DateTime
+
+  campaign Campaign @relation(fields: [campaign_id], references: [id], onDelete: Cascade)
+  rater    User     @relation("RatingByUser", fields: [rater_user_id], references: [id], onDelete: Cascade)
+  ratee    User     @relation("RatingToUser", fields: [ratee_user_id], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id         String   @id
+  user_id    String
+  action     String
+  entity     String
+  entity_id  String
+  created_at DateTime
+
+  user User @relation("UserAuditLogs", fields: [user_id], references: [id], onDelete: Cascade)
+}

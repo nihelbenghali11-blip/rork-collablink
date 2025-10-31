@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { protectedProcedure } from "@/backend/trpc/create-context";
-import { getDB, saveDB, logAudit } from "@/backend/db";
+import { updateCollaboratorRow, logAudit } from "@/backend/db";
 
 export default protectedProcedure
   .input(
@@ -14,17 +14,12 @@ export default protectedProcedure
       ad_status: z.enum(["Active", "Terminée"]).optional(),
     })
   )
-  .mutation(({ ctx, input }) => {
-    const db = getDB();
-    const collab = db.collaborators.find((c) => c.id === input.id && c.deleted_at == null);
-    if (!collab) throw new Error("Collaborator not found");
-    
-    Object.assign(collab, {
-      ...input,
-      updated_at: new Date().toISOString(),
-    });
-    
-    saveDB();
-    logAudit(ctx.userId!, "update", "collaborators", collab.id);
-    return { ok: true };
+  .mutation(async ({ ctx, input }) => {
+    const { id, ...patch } = input;
+
+    const updated = await updateCollaboratorRow(id, patch);
+
+    await logAudit(ctx.userId!, "update", "collaborators", id);
+
+    return { ok: true, collaborator: updated };
   });
