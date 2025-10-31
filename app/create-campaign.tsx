@@ -34,11 +34,11 @@ export default function CreateCampaignPage() {
   const [showPlatformPicker, setShowPlatformPicker] = useState<boolean>(false);
   const [showCurrencyPicker, setShowCurrencyPicker] = useState<boolean>(false);
 
-  const platformOptions = [
-    { id: "instagram", name: t("campaign.instagram") },
-    { id: "tiktok", name: t("campaign.tiktok") },
-    { id: "facebook", name: t("campaign.facebook") },
-    { id: "snapchat", name: "Snapchat" },
+  const platformOptions: { id: string; name: string; value: "Instagram" | "TikTok" | "Facebook" | "Snapchat" }[] = [
+    { id: "instagram", name: t("campaign.instagram"), value: "Instagram" },
+    { id: "tiktok", name: t("campaign.tiktok"), value: "TikTok" },
+    { id: "facebook", name: t("campaign.facebook"), value: "Facebook" },
+    { id: "snapchat", name: "Snapchat", value: "Snapchat" },
   ];
 
   const currencyOptions = ["EUR", "USD", "GBP", "TND", "MAD", "AED"];
@@ -69,8 +69,8 @@ export default function CreateCampaignPage() {
       
       const platformsFormatted = platforms.map((pId) => {
         const found = platformOptions.find((p) => p.id === pId);
-        return found?.name || pId;
-      }) as ("Instagram" | "TikTok" | "Facebook" | "Snapchat")[];
+        return (found?.value ?? "Instagram") as "Instagram" | "TikTok" | "Facebook" | "Snapchat";
+      });
 
       const result = await createMutation.mutateAsync({
         name: campaignName,
@@ -84,9 +84,11 @@ export default function CreateCampaignPage() {
       });
 
       await addCampaign({
+        id: result.id,
         name: campaignName,
         brandId: brandProfile.id,
         brandName: brandProfile.companyName,
+        userId: brandProfile.userId,
         status: "active",
         budget: parseFloat(budget),
         currency: currency,

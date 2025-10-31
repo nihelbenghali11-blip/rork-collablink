@@ -37,10 +37,10 @@ export const [CampaignProvider, useCampaigns] = createContextHook(() => {
     }
   };
 
-  const addCampaign = useCallback(async (campaign: Omit<Campaign, "id">) => {
+  const addCampaign = useCallback(async (campaign: Omit<Campaign, "id"> & { id?: string }) => {
     const newCampaign: Campaign = {
       ...campaign,
-      id: Date.now().toString(),
+      id: campaign.id ?? Date.now().toString(),
     };
     const updatedCampaigns = [...campaigns, newCampaign];
     setCampaignsState(updatedCampaigns);
