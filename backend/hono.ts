@@ -3,7 +3,6 @@ import { trpcServer } from "@hono/trpc-server";
 import { cors } from "hono/cors";
 import { appRouter } from "./trpc/app-router";
 import { createContext } from "./trpc/create-context";
-import superjson from "superjson";
 
 const app = new Hono();
 
@@ -15,7 +14,6 @@ app.use(
     endpoint: "/api/trpc",
     router: appRouter,
     createContext,
-    transformer: superjson,
   })
 );
 

@@ -7,7 +7,7 @@ export default protectedProcedure
     z.object({
       name: z.string().min(1),
       brand_name: z.string().min(1),
-      description: z.string().min(1),
+      description: z.string().optional().default(""),
       revenue_amount: z.number().positive(),
       revenue_currency: z.string().min(1),
       start_date: z.string().optional(),
@@ -25,7 +25,7 @@ export default protectedProcedure
       owner_user_id: ctx.userId!,
       name: input.name,
       brand_name: input.brand_name,
-      description: input.description,
+      description: input.description ?? "",
       revenue_amount: input.revenue_amount,
       revenue_currency: input.revenue_currency,
       start_date: input.start_date,
