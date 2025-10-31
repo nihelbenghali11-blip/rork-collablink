@@ -8,6 +8,7 @@ const app = new Hono();
 
 app.use("*", cors());
 
+// Mount tRPC at /api/trpc to match the client url
 app.use(
   "/api/trpc/*",
   trpcServer({
