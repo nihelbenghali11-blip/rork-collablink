@@ -1,5 +1,5 @@
 import { createTRPCReact } from "@trpc/react-query";
-import { httpBatchLink } from "@trpc/client";
+import { httpLink } from "@trpc/client";
 import type { AppRouter } from "@/backend/trpc/app-router";
 import superjson from "superjson";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -37,7 +37,7 @@ const getUserIdFromStorage = async (): Promise<string | null> => {
 
 export const trpcClient = trpc.createClient({
   links: [
-    httpBatchLink({
+    httpLink({
       url: `${getBaseUrl()}/api/trpc`,
       transformer: superjson,
       async headers() {
