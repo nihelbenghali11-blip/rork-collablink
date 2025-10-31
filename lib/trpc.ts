@@ -3,16 +3,22 @@ import { httpLink } from "@trpc/client";
 import type { AppRouter } from "@/backend/trpc/app-router";
 import superjson from "superjson";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Platform } from "react-native";
 
 export const trpc = createTRPCReact<AppRouter>();
 
 const getBaseUrl = () => {
-  if (process.env.EXPO_PUBLIC_RORK_API_BASE_URL) {
-    return process.env.EXPO_PUBLIC_RORK_API_BASE_URL;
+  const envUrl = process.env.EXPO_PUBLIC_RORK_API_BASE_URL;
+  if (envUrl && envUrl.trim().length > 0) {
+    return envUrl;
+  }
+
+  if (Platform.OS === "web" && typeof window !== "undefined") {
+    return window.location.origin;
   }
 
   throw new Error(
-    "No base url found, please set EXPO_PUBLIC_RORK_API_BASE_URL"
+    "No API base URL. Set EXPO_PUBLIC_RORK_API_BASE_URL in your env or run via web."
   );
 };
 
@@ -41,7 +47,7 @@ export const trpcClient = trpc.createClient({
       url: `${getBaseUrl()}/api/trpc`,
       transformer: superjson,
       async headers() {
-        const userId = currentUserId || await getUserIdFromStorage();
+        const userId = currentUserId || (await getUserIdFromStorage());
         return userId ? { "x-user-id": userId } : {};
       },
     }),
