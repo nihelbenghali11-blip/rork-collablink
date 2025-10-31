@@ -10,10 +10,9 @@ export default protectedProcedure
       description: z.string().min(1),
       revenue_amount: z.number().positive(),
       revenue_currency: z.string().min(1),
-      start_date: z.string().nullable().optional(),
+      start_date: z.string().optional(),
       status: z.enum(["active", "closed"]).default("active"),
-      platforms: z
-        .array(z.enum(["Instagram", "TikTok", "Facebook", "Snapchat"]))
+      platforms: z.array(z.enum(["Instagram", "TikTok", "Facebook", "Snapchat"]))
         .min(1),
     })
   )
@@ -21,7 +20,6 @@ export default protectedProcedure
     const db = getDB();
     const campaignId = id();
     const now = new Date().toISOString();
-
     db.campaigns.push({
       id: campaignId,
       owner_user_id: ctx.userId!,
@@ -30,18 +28,15 @@ export default protectedProcedure
       description: input.description,
       revenue_amount: input.revenue_amount,
       revenue_currency: input.revenue_currency,
-      start_date: input.start_date ?? null,
+      start_date: input.start_date,
       status: input.status,
       created_at: now,
       updated_at: now,
     });
-
     for (const p of input.platforms) {
       db.campaign_platforms.push({ campaign_id: campaignId, platform: p });
     }
-
     saveDB();
     logAudit(ctx.userId!, "create", "campaigns", campaignId);
-
     return { id: campaignId };
   });
