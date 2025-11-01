@@ -13,6 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Briefcase, ChevronLeft, Megaphone } from "lucide-react-native";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useUser } from "@/contexts/UserContext";
+import { trpc } from "@/lib/trpc";
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -32,39 +33,59 @@ export default function OnboardingPage() {
     followers: "",
   });
 
+  const registerMutation = trpc.users.register.useMutation();
+
   const handleSubmit = async () => {
     setIsLoading(true);
     
-    await new Promise((resolve) => setTimeout(resolve, 800));
-
-    const userId = `user_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-    const profileId = Date.now().toString();
-
-    if (userType === "brand") {
-      await setBrandProfile({
-        id: profileId,
-        userId,
-        companyName: formData.companyName,
-        industry: formData.industry,
+    try {
+      const result = await registerMutation.mutateAsync({
+        role: userType,
+        name: userType === "brand" ? formData.companyName : formData.fullName,
         email: formData.email,
-        description: `Welcome to ${formData.companyName}!`,
+        bio: userType === "brand" 
+          ? `Welcome to ${formData.companyName}!` 
+          : `Hi, I'm ${formData.fullName}!`,
+        sector: userType === "brand" ? formData.industry : undefined,
+        primary_platform: userType === "influencer" 
+          ? (formData.mainPlatform as any)
+          : undefined,
+        followers_count: userType === "influencer" 
+          ? parseInt(formData.followers) || 0 
+          : undefined,
       });
-    } else {
-      await setInfluencerProfile({
-        id: profileId,
-        userId,
-        username: formData.username,
-        fullName: formData.fullName,
-        email: formData.email,
-        mainPlatform: formData.mainPlatform,
-        followers: parseInt(formData.followers) || 0,
-        bio: `Hi, I'm ${formData.fullName}!`,
-        engagementRate: 4.5,
-      });
+
+      const profileId = Date.now().toString();
+
+      if (userType === "brand") {
+        await setBrandProfile({
+          id: profileId,
+          userId: result.id,
+          companyName: formData.companyName,
+          industry: formData.industry,
+          email: formData.email,
+          description: `Welcome to ${formData.companyName}!`,
+        });
+      } else {
+        await setInfluencerProfile({
+          id: profileId,
+          userId: result.id,
+          username: formData.username,
+          fullName: formData.fullName,
+          email: formData.email,
+          mainPlatform: formData.mainPlatform,
+          followers: parseInt(formData.followers) || 0,
+          bio: `Hi, I'm ${formData.fullName}!`,
+          engagementRate: 4.5,
+        });
+      }
+
+      router.replace("/(tabs)/dashboard" as any);
+    } catch (error) {
+      console.error("Registration failed:", error);
+    } finally {
+      setIsLoading(false);
     }
-
-    setIsLoading(false);
-    router.replace("/(tabs)/dashboard" as any);
   };
 
   const isBrandFormValid =

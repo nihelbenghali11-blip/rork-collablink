@@ -1,7 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import createContextHook from "@nkzw/create-context-hook";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { setTRPCUserId } from "@/lib/trpc";
+import { setTRPCUserId, trpc } from "@/lib/trpc";
 
 export type UserType = "brand" | "influencer" | null;
 
@@ -57,6 +57,8 @@ export const [UserProvider, useUser] = createContextHook(() => {
     loadUserData();
   }, []);
 
+  const registerMutation = trpc.users.register.useMutation();
+
   const loadUserData = async () => {
     try {
       const [storedType, storedProfile] = await Promise.all([
@@ -68,12 +70,37 @@ export const [UserProvider, useUser] = createContextHook(() => {
         const type = storedType as UserType;
         let profile = JSON.parse(storedProfile);
         
-        if (!profile.userId) {
-          profile = {
-            ...profile,
-            userId: `user_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
-          };
-          await AsyncStorage.setItem(USER_PROFILE_KEY, JSON.stringify(profile));
+        if (!profile.userId || profile.userId.startsWith('user_')) {
+          console.log("[UserContext] Migrating temp user to database");
+          
+          if (type !== null) {
+            try {
+              const result = await registerMutation.mutateAsync({
+                role: type,
+              name: type === "brand" ? profile.companyName : profile.fullName,
+              email: profile.email,
+              bio: profile.description || profile.bio,
+              sector: type === "brand" ? profile.industry : undefined,
+              primary_platform: type === "influencer" ? profile.primaryPlatform : undefined,
+              followers_count: type === "influencer" ? profile.followersCount || profile.followers : undefined,
+            });
+            
+            profile = {
+              ...profile,
+              userId: result.id,
+            };
+            
+            await AsyncStorage.setItem(USER_PROFILE_KEY, JSON.stringify(profile));
+            console.log("[UserContext] User migrated successfully with ID:", result.id);
+            } catch (error) {
+              console.error("[UserContext] Failed to migrate user:", error);
+              profile = {
+                ...profile,
+                userId: `user_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+              };
+              await AsyncStorage.setItem(USER_PROFILE_KEY, JSON.stringify(profile));
+            }
+          }
         }
         
         setUserTypeState(type);
