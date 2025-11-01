@@ -54,12 +54,19 @@ export default function OnboardingPage() {
         if (!healthResponse.ok) {
           console.error("[Onboarding] Health check failed:", healthResponse.status);
         } else {
-          const healthData = await healthResponse.json();
-          console.log("[Onboarding] Backend health check passed:", healthData);
+          const contentType = healthResponse.headers.get("content-type") ?? "";
+          if (contentType.includes("application/json")) {
+            const healthData = await healthResponse.json();
+            console.log("[Onboarding] Backend health check passed:", healthData);
+          } else {
+            const text = await healthResponse.text();
+            console.error("[Onboarding] Health check returned non-JSON:", text.slice(0, 120));
+            throw new Error("Health endpoint did not return JSON");
+          }
         }
       } catch (healthError) {
         console.error("[Onboarding] Backend health check error:", healthError);
-        alert("Cannot connect to backend. Please ensure the backend server is running.\n\nRun: rork dev --allow-node-write-file-open");
+        alert("Cannot connect to backend. Please set EXPO_PUBLIC_RORK_API_BASE_URL to your backend URL and ensure it is reachable.");
         setIsLoading(false);
         return;
       }

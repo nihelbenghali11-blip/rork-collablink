@@ -9,19 +9,19 @@ export const trpc = createTRPCReact<AppRouter>();
 
 export const getBaseUrl = () => {
   const envUrl = process.env.EXPO_PUBLIC_RORK_API_BASE_URL;
-  
-  if (Platform.OS === "web" && typeof window !== "undefined") {
-    console.log("[tRPC] Running on web, using origin:", window.location.origin);
-    return window.location.origin;
-  }
-  
+
   if (envUrl && envUrl.trim().length > 0) {
     console.log("[tRPC] Using EXPO_PUBLIC_RORK_API_BASE_URL:", envUrl);
-    return envUrl;
+    return envUrl.replace(/\/$/, "");
+  }
+
+  if (Platform.OS === "web" && typeof window !== "undefined") {
+    console.log("[tRPC] Running on web without explicit API URL, using origin:", window.location.origin);
+    return window.location.origin.replace(/\/$/, "");
   }
 
   throw new Error(
-    "No API base URL. Set EXPO_PUBLIC_RORK_API_BASE_URL in your env or run via web."
+    "No API base URL. Set EXPO_PUBLIC_RORK_API_BASE_URL in your env to use the shared backend."
   );
 };
 
