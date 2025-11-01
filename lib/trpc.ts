@@ -3,6 +3,7 @@ import { httpLink } from "@trpc/client";
 import type { AppRouter } from "@/backend/trpc/app-router";
 import superjson from "superjson";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Platform } from "react-native";
 
 export const trpc = createTRPCReact<AppRouter>();
 
@@ -44,15 +45,19 @@ export const trpcClient = trpc.createClient({
         return userId ? { "x-user-id": userId } : {};
       },
       fetch(url, options) {
-        console.log("[tRPC] Fetching:", url);
-        return fetch(url, {
+        const opts: RequestInit = {
           ...options,
           headers: {
             ...(options?.headers || {}),
             // Avoid ngrok browser warning banners in web build
             "ngrok-skip-browser-warning": "true",
           },
-        }).catch((error) => {
+          mode: Platform.OS === "web" ? "cors" : undefined,
+          credentials: "omit",
+          keepalive: false,
+        } as RequestInit;
+        console.log("[tRPC] Fetching:", String(url));
+        return fetch(url as RequestInfo, opts).catch((error) => {
           console.error("[tRPC] Fetch error:", error);
           throw error;
         });
