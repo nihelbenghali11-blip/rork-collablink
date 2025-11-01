@@ -6,46 +6,36 @@ import { createContext } from "./trpc/create-context";
 
 const app = new Hono();
 
-app.use("*", cors({
-  origin: "*",
-  credentials: true,
-}));
+// CORS for Expo / ngrok
+app.use(
+  "*",
+  cors({
+    origin: "*",
+    credentials: true,
+  })
+);
 
+// Basic request logging
 app.use("*", async (c, next) => {
   console.log(`[Backend] ${c.req.method} ${c.req.url}`);
   await next();
 });
 
-// Mount tRPC at /api/trpc to match the client url
+// tRPC mount at /trpc/*
 app.use(
-  "/api/trpc/*",
+  "/trpc/*",
   trpcServer({
     router: appRouter,
     createContext,
   })
 );
 
-app.get("/", (c) => {
-  return c.json({ status: "ok", message: "API is running" });
-});
-
+// Health check
 app.get("/api/health", (c) => {
-  console.log("[Backend] Health check called");
-  return c.json({ 
-    status: "ok", 
+  return c.json({
+    status: "ok",
     message: "Backend is healthy",
     timestamp: new Date().toISOString(),
-  });
-});
-
-app.get("/api/test", (c) => {
-  console.log("[Backend] Test endpoint called");
-  return c.json({ 
-    status: "ok", 
-    message: "Test endpoint working",
-    env: {
-      hasDatabaseUrl: !!process.env.DATABASE_URL,
-    },
   });
 });
 

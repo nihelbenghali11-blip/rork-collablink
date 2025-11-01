@@ -4,7 +4,7 @@ import superjson from "superjson";
 
 export const createContext = async (opts: FetchCreateContextFnOptions) => {
   const userId = opts.req.headers.get("x-user-id") || null;
-  
+
   console.log("[Backend] Creating context, userId:", userId);
 
   return {
@@ -26,6 +26,7 @@ export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
   if (!ctx.userId) {
     throw new TRPCError({ code: "UNAUTHORIZED" });
   }
+
   return next({
     ctx: {
       ...ctx,

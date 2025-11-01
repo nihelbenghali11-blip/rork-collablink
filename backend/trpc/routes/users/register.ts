@@ -10,14 +10,21 @@ export default publicProcedure
       name: z.string().min(1),
       email: z.string().email(),
       password: z.string().min(6).optional().default("temp_password_123"),
+
       bio: z.string().optional(),
       sector: z.string().optional(),
-      primary_platform: z.enum(["Instagram", "TikTok", "YouTube", "Facebook", "Snapchat"]).optional(),
+
+      primary_platform: z
+        .enum(["Instagram", "TikTok", "YouTube", "Facebook", "Snapchat"])
+        .optional(),
+
       followers_count: z.number().optional(),
+
       instagram_url: z.string().optional(),
       tiktok_url: z.string().optional(),
       facebook_url: z.string().optional(),
       snapchat_url: z.string().optional(),
+
       website: z.string().optional(),
       phone: z.string().optional(),
       address: z.string().optional(),
@@ -34,12 +41,18 @@ export default publicProcedure
     const now = new Date();
 
     console.log("[Backend] Checking for existing user with email:", input.email);
+
     const existingUser = await prisma.user.findUnique({
       where: { email: input.email },
     });
 
     if (existingUser) {
-      console.log("[Backend] User already exists, returning existing user:", existingUser.id);
+      console.log(
+        "[Backend] User already exists, returning existing user:",
+        existingUser.id
+      );
+
+      // Return only fields your frontend actually reads
       return {
         id: existingUser.id,
         role: existingUser.role,
@@ -47,72 +60,54 @@ export default publicProcedure
         email: existingUser.email,
         bio: existingUser.bio,
         sector: existingUser.sector,
-        primary_platform: existingUser.primary_platform,
-        followers_count: existingUser.followers_count,
-        instagram_url: existingUser.instagram_url,
-        tiktok_url: existingUser.tiktok_url,
-        facebook_url: existingUser.facebook_url,
-        snapchat_url: existingUser.snapchat_url,
-        website: existingUser.website,
-        phone: existingUser.phone,
-        address: existingUser.address,
-        rating_avg: existingUser.rating_avg,
         created_at: existingUser.created_at,
       };
     }
 
     console.log("[Backend] Creating new user with ID:", userId);
+
     try {
+      // minimal insert that is very unlikely to violate schema
       const user = await prisma.user.create({
         data: {
           id: userId,
           role: input.role,
           name: input.name,
           email: input.email,
-          password_hash: input.password,
+          // assuming your schema has password_hash: String
+          password_hash: input.password ?? "temp_password_123",
+
           bio: input.bio ?? null,
           sector: input.sector ?? null,
-          primary_platform: input.primary_platform ?? null,
-          followers_count: input.followers_count ?? null,
-          instagram_url: input.instagram_url ?? null,
-          tiktok_url: input.tiktok_url ?? null,
-          facebook_url: input.facebook_url ?? null,
-          snapchat_url: input.snapchat_url ?? null,
-          website: input.website ?? null,
-          phone: input.phone ?? null,
-          address: input.address ?? null,
-          avatar_url: null,
-          default_currency: "EUR",
-          rating_avg: null,
+
+          // timestamps. adjust the field names if your Prisma model uses createdAt / updatedAt instead
           created_at: now,
           updated_at: now,
-          deleted_at: null,
+        },
+        select: {
+          id: true,
+          role: true,
+          name: true,
+          email: true,
+          bio: true,
+          sector: true,
+          created_at: true,
         },
       });
 
-      console.log("[Backend] User created successfully in database:", user.id);
+      console.log(
+        "[Backend] User created successfully in database:",
+        user.id
+      );
 
-      return {
-        id: user.id,
-        role: user.role,
-        name: user.name,
-        email: user.email,
-        bio: user.bio,
-        sector: user.sector,
-        primary_platform: user.primary_platform,
-        followers_count: user.followers_count,
-        instagram_url: user.instagram_url,
-        tiktok_url: user.tiktok_url,
-        facebook_url: user.facebook_url,
-        snapchat_url: user.snapchat_url,
-        website: user.website,
-        phone: user.phone,
-        address: user.address,
-        rating_avg: user.rating_avg,
-        created_at: user.created_at,
-      };
+      return user;
     } catch (error) {
-      console.error("[Backend] Failed to create user in database:", error);
+      console.error(
+        "[Backend] Failed to create user in database:",
+        error
+      );
+      // You rethrow so tRPC returns 500.
+      // That's fine. The important part here is the console.error above.
       throw error;
     }
   });

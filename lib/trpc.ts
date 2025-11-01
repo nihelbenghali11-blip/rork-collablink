@@ -3,28 +3,16 @@ import { httpLink } from "@trpc/client";
 import type { AppRouter } from "@/backend/trpc/app-router";
 import superjson from "superjson";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Platform } from "react-native";
 
 export const trpc = createTRPCReact<AppRouter>();
 
+// Hardcode backend base URL so Expo web and physical device both hit the same backend.
+// For local dev without ngrok you would replace with your machine IP on LAN.
 export const getBaseUrl = () => {
-  const envUrl = process.env.EXPO_PUBLIC_RORK_API_BASE_URL;
-  
-  if (Platform.OS === "web" && typeof window !== "undefined") {
-    console.log("[tRPC] Running on web, using origin:", window.location.origin);
-    return window.location.origin;
-  }
-  
-  if (envUrl && envUrl.trim().length > 0) {
-    console.log("[tRPC] Using EXPO_PUBLIC_RORK_API_BASE_URL:", envUrl);
-    return envUrl;
-  }
-
-  throw new Error(
-    "No API base URL. Set EXPO_PUBLIC_RORK_API_BASE_URL in your env or run via web."
-  );
+  return "https://towanda-proauthor-carlos.ngrok-free.dev";
 };
 
+// In-memory cache of userId so we do not hit AsyncStorage every call
 let currentUserId: string | null = null;
 
 export const setTRPCUserId = (userId: string | null) => {
@@ -44,19 +32,27 @@ const getUserIdFromStorage = async (): Promise<string | null> => {
   return null;
 };
 
+// Client used by provider at app root
 export const trpcClient = trpc.createClient({
+  transformer: superjson,
   links: [
     httpLink({
-      url: `${getBaseUrl()}/api/trpc`,
-      transformer: superjson,
+      url: `${getBaseUrl()}/trpc`,
       async headers() {
+        // Attach x-user-id if we have it so protectedProcedure can read ctx.userId
         const userId = currentUserId || (await getUserIdFromStorage());
-        console.log("[tRPC] Request headers, userId:", userId);
         return userId ? { "x-user-id": userId } : {};
       },
       fetch(url, options) {
         console.log("[tRPC] Fetching:", url);
-        return fetch(url, options).catch((error) => {
+        return fetch(url, {
+          ...options,
+          headers: {
+            ...(options?.headers || {}),
+            // Avoid ngrok browser warning banners in web build
+            "ngrok-skip-browser-warning": "true",
+          },
+        }).catch((error) => {
           console.error("[tRPC] Fetch error:", error);
           throw error;
         });
