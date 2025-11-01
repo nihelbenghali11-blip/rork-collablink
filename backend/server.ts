@@ -1,3 +1,5 @@
+import "dotenv/config"; // load .env automatically from the project root
+
 import { serve } from "@hono/node-server";
 import app from "./hono";
 

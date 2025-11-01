@@ -2,7 +2,7 @@ import { PrismaClient } from "./generated/prisma";
 
 (function ensureEnvLoaded() {
   try {
-    if (typeof process !== "undefined" && !process.env.DATABASE_URL) {
+    if (typeof process !== "undefined") {
       // Try to load backend/.env manually without dotenv
       const fs = require("fs");
       const path = require("path");
