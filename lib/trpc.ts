@@ -10,18 +10,28 @@ export const trpc = createTRPCReact<AppRouter>();
 export const getBaseUrl = () => {
   const envUrl = process.env.EXPO_PUBLIC_RORK_API_BASE_URL;
 
+  if (Platform.OS === "web" && typeof window !== "undefined") {
+    const origin = window.location.origin.replace(/\/$/, "");
+    const host = window.location.host;
+    // Prefer same-origin when running in Rork/Expo web to avoid CORS and mixed environments
+    if (host.includes("rork.app") || host.includes("exp.direct")) {
+      console.log("[tRPC] Using same-origin base URL:", origin);
+      return origin;
+    }
+  }
+
   if (envUrl && envUrl.trim().length > 0) {
     console.log("[tRPC] Using EXPO_PUBLIC_RORK_API_BASE_URL:", envUrl);
     return envUrl.replace(/\/$/, "");
   }
 
   if (Platform.OS === "web" && typeof window !== "undefined") {
-    console.log("[tRPC] Running on web without explicit API URL, using origin:", window.location.origin);
+    console.log("[tRPC] Fallback to origin base URL:", window.location.origin);
     return window.location.origin.replace(/\/$/, "");
   }
 
   throw new Error(
-    "No API base URL. Set EXPO_PUBLIC_RORK_API_BASE_URL in your env to use the shared backend."
+    "No API base URL. Set EXPO_PUBLIC_RORK_API_BASE_URL or run in web with a same-origin backend."
   );
 };
 
@@ -55,8 +65,14 @@ export const trpcClient = trpc.createClient({
         return userId ? { "x-user-id": userId } : {};
       },
       fetch(url, options) {
-        console.log("[tRPC] Fetching:", url);
-        return fetch(url, options).catch((error) => {
+        const opts: RequestInit = {
+          ...options,
+          mode: Platform.OS === "web" ? "cors" : undefined,
+          credentials: "omit",
+          keepalive: false,
+        } as RequestInit;
+        console.log("[tRPC] Fetching:", String(url));
+        return fetch(url as RequestInfo, opts).catch((error) => {
           console.error("[tRPC] Fetch error:", error);
           throw error;
         });
