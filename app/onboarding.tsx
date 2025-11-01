@@ -45,6 +45,26 @@ export default function OnboardingPage() {
         name: userType === "brand" ? formData.companyName : formData.fullName,
       });
 
+      console.log("[Onboarding] Testing backend connectivity...");
+      try {
+        const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
+        console.log("[Onboarding] Base URL:", baseUrl);
+        
+        const healthResponse = await fetch(`${baseUrl}/api/health`);
+        if (!healthResponse.ok) {
+          console.error("[Onboarding] Health check failed:", healthResponse.status);
+        } else {
+          const healthData = await healthResponse.json();
+          console.log("[Onboarding] Backend health check passed:", healthData);
+        }
+      } catch (healthError) {
+        console.error("[Onboarding] Backend health check error:", healthError);
+        alert("Cannot connect to backend. Please ensure the backend server is running.\n\nRun: rork dev --allow-node-write-file-open");
+        setIsLoading(false);
+        return;
+      }
+
+      console.log("[Onboarding] Calling register mutation...");
       const result = await registerMutation.mutateAsync({
         role: userType,
         name: userType === "brand" ? formData.companyName : formData.fullName,
@@ -100,7 +120,16 @@ export default function OnboardingPage() {
         console.error("[Onboarding] Error message:", error.message);
         console.error("[Onboarding] Error stack:", error.stack);
       }
-      alert(`Registration failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      
+      let errorMessage = "Unknown error";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+        if (error.message.includes("Failed to fetch")) {
+          errorMessage = "Cannot connect to backend server.\n\nPlease ensure you're running:\nrork dev --allow-node-write-file-open\n\nOr check that the backend is accessible.";
+        }
+      }
+      
+      alert(`Registration failed:\n\n${errorMessage}`);
     } finally {
       setIsLoading(false);
     }

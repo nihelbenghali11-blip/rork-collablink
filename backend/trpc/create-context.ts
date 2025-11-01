@@ -4,6 +4,8 @@ import superjson from "superjson";
 
 export const createContext = async (opts: FetchCreateContextFnOptions) => {
   const userId = opts.req.headers.get("x-user-id") || null;
+  
+  console.log("[Backend] Creating context, userId:", userId);
 
   return {
     req: opts.req,

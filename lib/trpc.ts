@@ -9,12 +9,15 @@ export const trpc = createTRPCReact<AppRouter>();
 
 const getBaseUrl = () => {
   const envUrl = process.env.EXPO_PUBLIC_RORK_API_BASE_URL;
-  if (envUrl && envUrl.trim().length > 0) {
-    return envUrl;
-  }
-
+  
   if (Platform.OS === "web" && typeof window !== "undefined") {
+    console.log("[tRPC] Running on web, using origin:", window.location.origin);
     return window.location.origin;
+  }
+  
+  if (envUrl && envUrl.trim().length > 0) {
+    console.log("[tRPC] Using EXPO_PUBLIC_RORK_API_BASE_URL:", envUrl);
+    return envUrl;
   }
 
   throw new Error(
@@ -48,7 +51,15 @@ export const trpcClient = trpc.createClient({
       transformer: superjson,
       async headers() {
         const userId = currentUserId || (await getUserIdFromStorage());
+        console.log("[tRPC] Request headers, userId:", userId);
         return userId ? { "x-user-id": userId } : {};
+      },
+      fetch(url, options) {
+        console.log("[tRPC] Fetching:", url);
+        return fetch(url, options).catch((error) => {
+          console.error("[tRPC] Fetch error:", error);
+          throw error;
+        });
       },
     }),
   ],
