@@ -10,24 +10,21 @@ export const trpc = createTRPCReact<AppRouter>();
 export const getBaseUrl = () => {
   const envUrl = process.env.EXPO_PUBLIC_RORK_API_BASE_URL;
 
+  if (envUrl && envUrl.trim().length > 0) {
+    const cleaned = envUrl.replace(/\/$/, "");
+    console.log("[tRPC] Using EXPO_PUBLIC_RORK_API_BASE_URL:", cleaned);
+    return cleaned;
+  }
+
   if (Platform.OS === "web" && typeof window !== "undefined") {
     const origin = window.location.origin.replace(/\/$/, "");
     const host = window.location.host;
-    // Prefer same-origin when running in Rork/Expo web to avoid CORS and mixed environments
     if (host.includes("rork.app") || host.includes("exp.direct")) {
       console.log("[tRPC] Using same-origin base URL:", origin);
       return origin;
     }
-  }
-
-  if (envUrl && envUrl.trim().length > 0) {
-    console.log("[tRPC] Using EXPO_PUBLIC_RORK_API_BASE_URL:", envUrl);
-    return envUrl.replace(/\/$/, "");
-  }
-
-  if (Platform.OS === "web" && typeof window !== "undefined") {
-    console.log("[tRPC] Fallback to origin base URL:", window.location.origin);
-    return window.location.origin.replace(/\/$/, "");
+    console.log("[tRPC] Fallback to origin base URL:", origin);
+    return origin;
   }
 
   throw new Error(
