@@ -12,7 +12,6 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { useCampaigns } from "@/contexts/CampaignContext";
 import { useUser } from "@/contexts/UserContext";
 import { trpc } from "@/lib/trpc";
 
@@ -20,7 +19,6 @@ export default function CreateCampaignPage() {
   const { t } = useLanguage();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { addCampaign } = useCampaigns();
   const { brandProfile } = useUser();
 
   const [campaignName, setCampaignName] = useState<string>("");
@@ -65,11 +63,17 @@ export default function CreateCampaignPage() {
     }
 
     try {
-      const platformNames = platforms.map((pId) => platformOptions.find((p) => p.id === pId)?.name || pId).join(", ");
-      
       const platformsFormatted = platforms.map((pId) => {
         const found = platformOptions.find((p) => p.id === pId);
         return (found?.value ?? "Instagram") as "Instagram" | "TikTok" | "Facebook" | "Snapchat";
+      });
+
+      console.log("[CreateCampaign] Creating campaign with userId:", brandProfile.userId);
+      console.log("[CreateCampaign] Campaign data:", {
+        name: campaignName,
+        brand_name: brandProfile.companyName,
+        platforms: platformsFormatted,
+        budget: parseFloat(budget),
       });
 
       const result = await createMutation.mutateAsync({
@@ -83,28 +87,24 @@ export default function CreateCampaignPage() {
         platforms: platformsFormatted,
       });
 
-      await addCampaign({
-        id: result.id,
-        name: campaignName,
-        brandId: brandProfile.id,
-        brandName: brandProfile.companyName,
-        userId: brandProfile.userId,
-        status: "active",
-        budget: parseFloat(budget),
-        currency: currency,
-        startDate: new Date().toISOString().split('T')[0],
-        description: description || "",
-        platform: platformNames,
-        platforms: platforms,
-        objectives: objectives || "",
-        requirements: requirements || "",
-        hashtags: hashtags || "",
-      });
-
-      router.push(`/campaign-details?id=${result.id}`);
+      console.log("[CreateCampaign] Campaign created successfully with ID:", result.id);
+      
+      Alert.alert(
+        t("common.success"),
+        "Campaign created successfully!",
+        [
+          {
+            text: "OK",
+            onPress: () => router.push(`/campaign-details?id=${result.id}`)
+          }
+        ]
+      );
     } catch (error) {
-      console.error("Failed to create campaign:", error);
-      Alert.alert(t("common.error"), "Failed to create campaign");
+      console.error("[CreateCampaign] Failed to create campaign:", error);
+      Alert.alert(
+        t("common.error"), 
+        `Failed to create campaign: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   };
 

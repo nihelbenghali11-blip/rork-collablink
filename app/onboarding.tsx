@@ -13,6 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Briefcase, ChevronLeft, Megaphone } from "lucide-react-native";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useUser } from "@/contexts/UserContext";
+import { trpc } from "@/lib/trpc";
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -32,39 +33,106 @@ export default function OnboardingPage() {
     followers: "",
   });
 
+  const registerMutation = trpc.users.register.useMutation();
+
   const handleSubmit = async () => {
     setIsLoading(true);
     
-    await new Promise((resolve) => setTimeout(resolve, 800));
-
-    const userId = `user_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-    const profileId = Date.now().toString();
-
-    if (userType === "brand") {
-      await setBrandProfile({
-        id: profileId,
-        userId,
-        companyName: formData.companyName,
-        industry: formData.industry,
+    try {
+      console.log("[Onboarding] Starting registration for:", {
+        userType,
         email: formData.email,
-        description: `Welcome to ${formData.companyName}!`,
+        name: userType === "brand" ? formData.companyName : formData.fullName,
       });
-    } else {
-      await setInfluencerProfile({
-        id: profileId,
-        userId,
-        username: formData.username,
-        fullName: formData.fullName,
+
+      console.log("[Onboarding] Testing backend connectivity...");
+      try {
+        const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
+        console.log("[Onboarding] Base URL:", baseUrl);
+        
+        const healthResponse = await fetch(`${baseUrl}/api/health`);
+        if (!healthResponse.ok) {
+          console.error("[Onboarding] Health check failed:", healthResponse.status);
+        } else {
+          const healthData = await healthResponse.json();
+          console.log("[Onboarding] Backend health check passed:", healthData);
+        }
+      } catch (healthError) {
+        console.error("[Onboarding] Backend health check error:", healthError);
+        alert("Cannot connect to backend. Please ensure the backend server is running.\n\nRun: rork dev --allow-node-write-file-open");
+        setIsLoading(false);
+        return;
+      }
+
+      console.log("[Onboarding] Calling register mutation...");
+      const result = await registerMutation.mutateAsync({
+        role: userType,
+        name: userType === "brand" ? formData.companyName : formData.fullName,
         email: formData.email,
-        mainPlatform: formData.mainPlatform,
-        followers: parseInt(formData.followers) || 0,
-        bio: `Hi, I'm ${formData.fullName}!`,
-        engagementRate: 4.5,
+        bio: userType === "brand" 
+          ? `Welcome to ${formData.companyName}!` 
+          : `Hi, I'm ${formData.fullName}!`,
+        sector: userType === "brand" ? formData.industry : undefined,
+        primary_platform: userType === "influencer" 
+          ? (formData.mainPlatform as any)
+          : undefined,
+        followers_count: userType === "influencer" 
+          ? parseInt(formData.followers) || 0 
+          : undefined,
       });
+
+      console.log("[Onboarding] Registration successful, user ID:", result.id);
+
+      const profileId = Date.now().toString();
+
+      if (userType === "brand") {
+        console.log("[Onboarding] Saving brand profile to AsyncStorage");
+        await setBrandProfile({
+          id: profileId,
+          userId: result.id,
+          companyName: formData.companyName,
+          industry: formData.industry,
+          email: formData.email,
+          description: `Welcome to ${formData.companyName}!`,
+        });
+        console.log("[Onboarding] Brand profile saved successfully");
+      } else {
+        console.log("[Onboarding] Saving influencer profile to AsyncStorage");
+        await setInfluencerProfile({
+          id: profileId,
+          userId: result.id,
+          username: formData.username,
+          fullName: formData.fullName,
+          email: formData.email,
+          mainPlatform: formData.mainPlatform,
+          followers: parseInt(formData.followers) || 0,
+          bio: `Hi, I'm ${formData.fullName}!`,
+          engagementRate: 4.5,
+        });
+        console.log("[Onboarding] Influencer profile saved successfully");
+      }
+
+      console.log("[Onboarding] Navigating to dashboard");
+      router.replace("/(tabs)/dashboard" as any);
+    } catch (error) {
+      console.error("[Onboarding] Registration failed:", error);
+      if (error instanceof Error) {
+        console.error("[Onboarding] Error message:", error.message);
+        console.error("[Onboarding] Error stack:", error.stack);
+      }
+      
+      let errorMessage = "Unknown error";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+        if (error.message.includes("Failed to fetch")) {
+          errorMessage = "Cannot connect to backend server.\n\nPlease ensure you're running:\nrork dev --allow-node-write-file-open\n\nOr check that the backend is accessible.";
+        }
+      }
+      
+      alert(`Registration failed:\n\n${errorMessage}`);
+    } finally {
+      setIsLoading(false);
     }
-
-    setIsLoading(false);
-    router.replace("/(tabs)/dashboard" as any);
   };
 
   const isBrandFormValid =
