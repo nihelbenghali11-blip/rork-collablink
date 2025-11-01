@@ -10,6 +10,10 @@ export const trpc = createTRPCReact<AppRouter>();
 // Hardcode backend base URL so Expo web and physical device both hit the same backend.
 // For local dev without ngrok you would replace with your machine IP on LAN.
 export const getBaseUrl = () => {
+  const envUrl = process.env.EXPO_PUBLIC_RORK_API_BASE_URL;
+  if (envUrl && typeof envUrl === "string" && envUrl.trim().length > 0) {
+    return envUrl.replace(/\/$/, "");
+  }
   return "https://towanda-proauthor-carlos.ngrok-free.dev";
 };
 
@@ -35,12 +39,11 @@ const getUserIdFromStorage = async (): Promise<string | null> => {
 
 // Client used by provider at app root
 export const trpcClient = trpc.createClient({
-  transformer: superjson,
   links: [
     httpLink({
       url: `${getBaseUrl()}/trpc`,
+      transformer: superjson,
       async headers() {
-        // Attach x-user-id if we have it so protectedProcedure can read ctx.userId
         const userId = currentUserId || (await getUserIdFromStorage());
         return userId ? { "x-user-id": userId } : {};
       },
@@ -48,10 +51,12 @@ export const trpcClient = trpc.createClient({
         const opts: RequestInit = {
           ...options,
           headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
             ...(options?.headers || {}),
-            // Avoid ngrok browser warning banners in web build
             "ngrok-skip-browser-warning": "true",
           },
+          method: options?.method ?? "POST",
           mode: Platform.OS === "web" ? "cors" : undefined,
           credentials: "omit",
           keepalive: false,
