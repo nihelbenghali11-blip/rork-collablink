@@ -52,23 +52,24 @@ export default function OnboardingPage() {
         
         const healthResponse = await fetch(`${baseUrl}/api/health`);
         if (!healthResponse.ok) {
-          console.error("[Onboarding] Health check failed:", healthResponse.status);
+          console.warn("[Onboarding] Health check non-200:", healthResponse.status);
         } else {
           const contentType = healthResponse.headers.get("content-type") ?? "";
           if (contentType.includes("application/json")) {
-            const healthData = await healthResponse.json();
-            console.log("[Onboarding] Backend health check passed:", healthData);
+            try {
+              const healthData = await healthResponse.json();
+              console.log("[Onboarding] Backend health check passed:", healthData);
+            } catch (parseErr) {
+              console.warn("[Onboarding] Health JSON parse failed, continuing:", parseErr);
+            }
           } else {
             const text = await healthResponse.text();
-            console.error("[Onboarding] Health check returned non-JSON:", text.slice(0, 120));
-            throw new Error("Health endpoint did not return JSON");
+            console.warn("[Onboarding] Health returned non-JSON, continuing. Snippet:", text.slice(0, 120));
           }
         }
       } catch (healthError) {
-        console.error("[Onboarding] Backend health check error:", healthError);
-        alert("Cannot connect to backend. Please set EXPO_PUBLIC_RORK_API_BASE_URL to your backend URL and ensure it is reachable.");
-        setIsLoading(false);
-        return;
+        console.warn("[Onboarding] Backend health check error (non-fatal):", healthError);
+        // Continue to attempt registration even if health check fails
       }
 
       console.log("[Onboarding] Calling register mutation...");
