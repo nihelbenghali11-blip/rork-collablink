@@ -7,7 +7,7 @@ import { Platform } from "react-native";
 
 export const trpc = createTRPCReact<AppRouter>();
 
-const getBaseUrl = () => {
+export const getBaseUrl = () => {
   const envUrl = process.env.EXPO_PUBLIC_RORK_API_BASE_URL;
   
   if (Platform.OS === "web" && typeof window !== "undefined") {

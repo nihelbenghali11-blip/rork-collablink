@@ -13,7 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Briefcase, ChevronLeft, Megaphone } from "lucide-react-native";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useUser } from "@/contexts/UserContext";
-import { trpc } from "@/lib/trpc";
+import { trpc, getBaseUrl } from "@/lib/trpc";
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -47,7 +47,7 @@ export default function OnboardingPage() {
 
       console.log("[Onboarding] Testing backend connectivity...");
       try {
-        const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
+        const baseUrl = getBaseUrl();
         console.log("[Onboarding] Base URL:", baseUrl);
         
         const healthResponse = await fetch(`${baseUrl}/api/health`);
