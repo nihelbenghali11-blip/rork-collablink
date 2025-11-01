@@ -39,6 +39,12 @@ export default function OnboardingPage() {
     setIsLoading(true);
     
     try {
+      console.log("[Onboarding] Starting registration for:", {
+        userType,
+        email: formData.email,
+        name: userType === "brand" ? formData.companyName : formData.fullName,
+      });
+
       const result = await registerMutation.mutateAsync({
         role: userType,
         name: userType === "brand" ? formData.companyName : formData.fullName,
@@ -55,9 +61,12 @@ export default function OnboardingPage() {
           : undefined,
       });
 
+      console.log("[Onboarding] Registration successful, user ID:", result.id);
+
       const profileId = Date.now().toString();
 
       if (userType === "brand") {
+        console.log("[Onboarding] Saving brand profile to AsyncStorage");
         await setBrandProfile({
           id: profileId,
           userId: result.id,
@@ -66,7 +75,9 @@ export default function OnboardingPage() {
           email: formData.email,
           description: `Welcome to ${formData.companyName}!`,
         });
+        console.log("[Onboarding] Brand profile saved successfully");
       } else {
+        console.log("[Onboarding] Saving influencer profile to AsyncStorage");
         await setInfluencerProfile({
           id: profileId,
           userId: result.id,
@@ -78,11 +89,18 @@ export default function OnboardingPage() {
           bio: `Hi, I'm ${formData.fullName}!`,
           engagementRate: 4.5,
         });
+        console.log("[Onboarding] Influencer profile saved successfully");
       }
 
+      console.log("[Onboarding] Navigating to dashboard");
       router.replace("/(tabs)/dashboard" as any);
     } catch (error) {
-      console.error("Registration failed:", error);
+      console.error("[Onboarding] Registration failed:", error);
+      if (error instanceof Error) {
+        console.error("[Onboarding] Error message:", error.message);
+        console.error("[Onboarding] Error stack:", error.stack);
+      }
+      alert(`Registration failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsLoading(false);
     }
