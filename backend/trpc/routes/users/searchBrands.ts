@@ -38,12 +38,33 @@ export default publicProcedure
         phone: true,
         address: true,
         avatar_url: true,
+        avatar_blob: true,
+        avatar_mime_type: true,
         rating_avg: true,
         created_at: true,
       },
     });
 
+    const mapped = rows.map((u: any) => {
+      const dataUrl = u.avatar_blob && u.avatar_mime_type
+        ? `data:${u.avatar_mime_type};base64,${Buffer.from(u.avatar_blob as any).toString("base64")}`
+        : null;
+      return {
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        bio: u.bio,
+        sector: u.sector,
+        website: u.website,
+        phone: u.phone,
+        address: u.address,
+        avatar_url: dataUrl || u.avatar_url,
+        rating_avg: u.rating_avg,
+        created_at: u.created_at,
+      };
+    });
+
     const nextCursor = rows.length === (input?.limit ?? 50) ? rows[rows.length - 1].id : undefined;
 
-    return { items: rows, nextCursor };
+    return { items: mapped, nextCursor };
   });

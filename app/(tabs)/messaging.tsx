@@ -22,17 +22,18 @@ export default function MessagingPage() {
   const conversations = convQuery.data ?? [];
 
   const renderConversation = ({ item }: { item: any }) => {
-    const otherUser = currentUserId
-      ? item.user_a_id === currentUserId
-        ? item.userB
-        : item.userA
-      : null;
+    const isA = item.user_a_id === currentUserId;
+    const otherUser = currentUserId ? (isA ? item.userB : item.userA) : null;
 
     const displayName = otherUser?.name ?? (otherUser?.id ?? "");
     const fallback = `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=E5E7EB&color=111827`;
-    const avatarUrl = (otherUser?.avatar_url && otherUser.avatar_url.length > 0)
-      ? otherUser.avatar_url
-      : (otherUser?.id ? `${getBaseUrl()}/api/users/${otherUser.id}/avatar` : fallback);
+
+    const preferBlob = isA ? (item.userB_has_blob === true) : (item.userA_has_blob === true);
+    const avatarUrl = preferBlob && otherUser?.id
+      ? `${getBaseUrl()}/api/users/${otherUser.id}/avatar`
+      : (otherUser?.avatar_url && otherUser.avatar_url.length > 0)
+        ? otherUser.avatar_url
+        : (otherUser?.id ? `${getBaseUrl()}/api/users/${otherUser.id}/avatar` : fallback);
 
     const lastSeenISO: string | null = otherUser?.updated_at ?? null;
     const isOnline = (() => {

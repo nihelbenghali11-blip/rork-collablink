@@ -33,9 +33,12 @@ export default function ConversationPage() {
 
   const otherId = userId as string | undefined;
   const displayName = name || userId || "Unknown";
-  const displayAvatar = otherId
-    ? `${getBaseUrl()}/api/users/${otherId}/avatar`
-    : `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=E5E7EB&color=111827`;
+  const otherProfile = trpc.users.getById.useQuery({ id: otherId || "" }, { enabled: !!otherId });
+  const displayAvatar = otherProfile.data?.avatar_url
+    ? (otherProfile.data.avatar_url as string)
+    : (otherId
+      ? `${getBaseUrl()}/api/users/${otherId}/avatar`
+      : `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=E5E7EB&color=111827`);
   const myAvatar = currentUserId
     ? `${getBaseUrl()}/api/users/${currentUserId}/avatar`
     : `https://ui-avatars.com/api/?name=${encodeURIComponent("Me")}&background=E5E7EB&color=111827`;

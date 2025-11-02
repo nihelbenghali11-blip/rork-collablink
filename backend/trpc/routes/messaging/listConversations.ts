@@ -9,8 +9,8 @@ export default protectedProcedure.query(async ({ ctx }) => {
     },
     orderBy: { updated_at: "desc" },
     include: {
-      userA: { select: { id: true, name: true, avatar_url: true, updated_at: true } },
-      userB: { select: { id: true, name: true, avatar_url: true, updated_at: true } },
+      userA: { select: { id: true, name: true, avatar_url: true, avatar_mime_type: true, updated_at: true } },
+      userB: { select: { id: true, name: true, avatar_url: true, avatar_mime_type: true, updated_at: true } },
     },
   });
   return rows.map((r: any) => ({
@@ -22,7 +22,19 @@ export default protectedProcedure.query(async ({ ctx }) => {
     unread_b: r.unread_b ?? 0,
     created_at: r.created_at?.toISOString?.() ?? null,
     updated_at: r.updated_at?.toISOString?.() ?? null,
-    userA: { id: r.userA.id, name: r.userA.name, avatar_url: r.userA.avatar_url, updated_at: r.userA.updated_at?.toISOString?.() ?? null },
-    userB: { id: r.userB.id, name: r.userB.name, avatar_url: r.userB.avatar_url, updated_at: r.userB.updated_at?.toISOString?.() ?? null },
+    userA: {
+      id: r.userA.id,
+      name: r.userA.name,
+      avatar_url: r.userA.avatar_url,
+      updated_at: r.userA.updated_at?.toISOString?.() ?? null,
+    },
+    userA_has_blob: !!r.userA.avatar_mime_type,
+    userB: {
+      id: r.userB.id,
+      name: r.userB.name,
+      avatar_url: r.userB.avatar_url,
+      updated_at: r.userB.updated_at?.toISOString?.() ?? null,
+    },
+    userB_has_blob: !!r.userB.avatar_mime_type,
   }));
 });

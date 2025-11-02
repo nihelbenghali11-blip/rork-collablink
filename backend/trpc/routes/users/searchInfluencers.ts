@@ -45,6 +45,8 @@ export default publicProcedure
         name: true,
         bio: true,
         avatar_url: true,
+        avatar_blob: true,
+        avatar_mime_type: true,
         primary_platform: true,
         followers_count: true,
         rating_avg: true,
@@ -56,7 +58,27 @@ export default publicProcedure
       },
     });
 
+    const mapped = rows.map((u: any) => {
+      const dataUrl = u.avatar_blob && u.avatar_mime_type
+        ? `data:${u.avatar_mime_type};base64,${Buffer.from(u.avatar_blob as any).toString("base64")}`
+        : null;
+      return {
+        id: u.id,
+        name: u.name,
+        bio: u.bio,
+        avatar_url: dataUrl || u.avatar_url,
+        primary_platform: u.primary_platform,
+        followers_count: u.followers_count,
+        rating_avg: u.rating_avg,
+        instagram_url: u.instagram_url,
+        tiktok_url: u.tiktok_url,
+        facebook_url: u.facebook_url,
+        snapchat_url: u.snapchat_url,
+        created_at: u.created_at,
+      };
+    });
+
     const nextCursor = rows.length === (input?.limit ?? 50) ? rows[rows.length - 1].id : undefined;
 
-    return { items: rows, nextCursor };
+    return { items: mapped, nextCursor };
   });
