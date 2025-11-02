@@ -31,6 +31,7 @@ import searchInfluencers from "./routes/users/searchInfluencers";
 import searchBrands from "./routes/users/searchBrands";
 import getById from "./routes/users/getById";
 import setAvatarBlob from "./routes/users/setAvatarBlob";
+import markRead from "./routes/messaging/markRead";
 
 export const appRouter = createTRPCRouter({
   example: createTRPCRouter({
@@ -58,7 +59,7 @@ export const appRouter = createTRPCRouter({
     openConversation,
     sendMessage,
     listMessages,
-    markRead: (await import('./routes/messaging/markRead')).default,
+  markRead,
   }),
 
   ratings: createTRPCRouter({
