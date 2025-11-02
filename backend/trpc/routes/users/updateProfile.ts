@@ -20,6 +20,7 @@ export default protectedProcedure
         .enum(["Instagram", "TikTok", "YouTube", "Facebook", "Snapchat"])
         .optional(),
       followers_count: z.number().int().nonnegative().optional(),
+      expo_push_token: z.string().optional().nullable(),
     })
   )
   .mutation(async ({ ctx, input }) => {

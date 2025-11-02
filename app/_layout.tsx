@@ -8,6 +8,7 @@ import { UserProvider } from "@/contexts/UserContext";
 import { CampaignProvider } from "@/contexts/CampaignContext";
 import { MessagingProvider } from "@/contexts/MessagingContext";
 import { trpc, trpcClient } from "@/lib/trpc";
+import { Platform } from "react-native";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -56,6 +57,7 @@ export default function RootLayout() {
       SplashScreen.hideAsync();
     }
   }, [isReady]);
+
 
   return (
     <trpc.Provider client={trpcClient} queryClient={queryClient}>

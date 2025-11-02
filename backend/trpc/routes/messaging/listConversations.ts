@@ -1,8 +1,18 @@
 import { protectedProcedure } from "@/backend/trpc/create-context";
-import { listConversationsForUser } from "@/backend/db";
+import prisma from "@/backend/prisma";
 
 export default protectedProcedure.query(async ({ ctx }) => {
-  const rows = await listConversationsForUser(ctx.userId!);
+  const rows = await prisma.conversation.findMany({
+    where: {
+      deleted_at: null,
+      OR: [{ user_a_id: ctx.userId! }, { user_b_id: ctx.userId! }],
+    },
+    orderBy: { updated_at: "desc" },
+    include: {
+      userA: { select: { id: true, name: true, avatar_url: true } },
+      userB: { select: { id: true, name: true, avatar_url: true } },
+    },
+  });
   return rows.map((r: any) => ({
     id: r.id,
     user_a_id: r.user_a_id,
@@ -12,5 +22,7 @@ export default protectedProcedure.query(async ({ ctx }) => {
     unread_b: r.unread_b ?? 0,
     created_at: r.created_at?.toISOString?.() ?? null,
     updated_at: r.updated_at?.toISOString?.() ?? null,
+    userA: { id: r.userA.id, name: r.userA.name, avatar_url: r.userA.avatar_url },
+    userB: { id: r.userB.id, name: r.userB.name, avatar_url: r.userB.avatar_url },
   }));
 });

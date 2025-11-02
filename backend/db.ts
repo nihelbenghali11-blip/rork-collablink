@@ -30,12 +30,29 @@ export async function updateUserProfile(
     snapchat_url?: string;
     primary_platform?: string;
     followers_count?: number;
+    expo_push_token?: string | null;
   }
 ) {
   return prisma.user.update({
     where: { id: userId },
     data: {
       ...patch,
+      updated_at: now(),
+    },
+  });
+}
+
+export async function setUserAvatarBlob(params: {
+  userId: string;
+  base64: string;
+  mime_type: string;
+}) {
+  const buffer = Buffer.from(params.base64, "base64");
+  return prisma.user.update({
+    where: { id: params.userId },
+    data: {
+      avatar_blob: buffer,
+      avatar_mime_type: params.mime_type,
       updated_at: now(),
     },
   });
@@ -417,7 +434,7 @@ export async function addRatingRow(params: {
   });
 
   const avg = ratings.length
-    ? ratings.reduce((s, r) => s + r.score, 0) / ratings.length
+    ? ratings.reduce((s: number, r: { score: number }) => s + r.score, 0) / ratings.length
     : 0;
 
   const rounded = Number(avg.toFixed(2));
@@ -447,7 +464,7 @@ export async function getInfluencerCountersForUser(userId: string) {
 
   const proposedCount = active.length;
   const totalRevenue = active.reduce(
-    (sum, c) => sum + (c.revenue_amount ?? 0),
+    (sum: number, c: { revenue_amount: number | null }) => sum + (c.revenue_amount ?? 0),
     0
   );
 
@@ -464,7 +481,7 @@ export async function getBrandTotalsForUser(userId: string) {
     select: { id: true },
   });
 
-  const activeIds = activeCampaigns.map((c) => c.id);
+  const activeIds = activeCampaigns.map((c: { id: string }) => c.id);
 
   if (activeIds.length === 0) {
     return { totalSpentActiveCampaigns: 0 };
@@ -479,7 +496,7 @@ export async function getBrandTotalsForUser(userId: string) {
   });
 
   const spent = collaborators.reduce(
-    (s, co) => s + co.agreed_amount,
+    (s: number, co: { agreed_amount: number }) => s + co.agreed_amount,
     0
   );
 

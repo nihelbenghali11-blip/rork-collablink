@@ -8,6 +8,10 @@ export default protectedProcedure.query(async ({ ctx }) => {
     return null;
   }
 
+  const avatar_data_url = user.avatar_blob && user.avatar_mime_type
+    ? `data:${user.avatar_mime_type};base64,${Buffer.from(user.avatar_blob as any).toString("base64")}`
+    : null;
+
   return {
     id: user.id,
     role: user.role,
@@ -24,7 +28,7 @@ export default protectedProcedure.query(async ({ ctx }) => {
     website: user.website,
     phone: user.phone,
     address: user.address,
-    avatar_url: user.avatar_url,
+    avatar_url: avatar_data_url || user.avatar_url,
     rating_avg: user.rating_avg,
     created_at: user.created_at,
   };

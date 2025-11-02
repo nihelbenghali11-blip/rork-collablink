@@ -1,10 +1,22 @@
 import { Tabs } from "expo-router";
 import { LayoutDashboard, Search, MessageCircle, User } from "lucide-react-native";
-import React from "react";
+import React, { useMemo } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useUser } from "@/contexts/UserContext";
+import { trpc } from "@/lib/trpc";
 
 export default function TabLayout() {
   const { t } = useLanguage();
+  const { currentUserId } = useUser();
+  const convQuery = trpc.messaging.listConversations.useQuery(undefined, { enabled: !!currentUserId });
+  const unreadCount = useMemo(() => {
+    const list = convQuery.data ?? [];
+    if (!currentUserId) return 0;
+    return list.reduce((acc: number, c: any) => {
+      const count = c.user_a_id === currentUserId ? (c.unread_a ?? 0) : (c.unread_b ?? 0);
+      return acc + (Number.isFinite(count) ? count : 0);
+    }, 0);
+  }, [convQuery.data, currentUserId]);
 
   return (
     <Tabs
@@ -49,6 +61,7 @@ export default function TabLayout() {
         options={{
           title: t("messaging.title"),
           tabBarIcon: ({ color }) => <MessageCircle size={24} color={color} />,
+          tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
         }}
       />
       <Tabs.Screen

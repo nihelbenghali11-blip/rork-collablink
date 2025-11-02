@@ -30,6 +30,7 @@ import getProfile from "./routes/users/getProfile";
 import searchInfluencers from "./routes/users/searchInfluencers";
 import searchBrands from "./routes/users/searchBrands";
 import getById from "./routes/users/getById";
+import setAvatarBlob from "./routes/users/setAvatarBlob";
 
 export const appRouter = createTRPCRouter({
   example: createTRPCRouter({
@@ -72,6 +73,7 @@ export const appRouter = createTRPCRouter({
     register: registerUser,
     getProfile,
     updateProfile,
+    setAvatarBlob,
     searchInfluencers,
     searchBrands,
     getById,

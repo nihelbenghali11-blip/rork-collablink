@@ -19,22 +19,31 @@ export default function MessagingPage() {
   const conversations = convQuery.data ?? [];
 
   const renderConversation = ({ item }: { item: any }) => {
-    const otherUserId = currentUserId ? (item.user_a_id === currentUserId ? item.user_b_id : item.user_a_id) : "";
+    const otherUser = currentUserId
+      ? item.user_a_id === currentUserId
+        ? item.userB
+        : item.userA
+      : null;
 
-    const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(otherUserId)}&background=E5E7EB&color=111827`;
+    const displayName = otherUser?.name ?? (otherUser?.id ?? "");
+    const avatarUrl = otherUser?.avatar_url
+      ? otherUser.avatar_url
+      : `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=E5E7EB&color=111827`;
 
     return (
       <Pressable
         style={[styles.conversationCard, ((item.user_a_id === currentUserId ? item.unread_a : item.unread_b) ?? 0) > 0 && styles.unreadCard]}
         onPress={() => {
-          router.push(`/conversation?id=${item.id}&userId=${otherUserId}&name=${otherUserId}` as any);
+          const otherId = otherUser?.id ?? "";
+          const name = displayName;
+          router.push(`/conversation?id=${item.id}&userId=${otherId}&name=${encodeURIComponent(name)}` as any);
         }}
         testID={`conversation-${item.id}`}
       >
         <Image source={{ uri: avatarUrl }} style={styles.avatar} contentFit="cover" />
         <View style={styles.conversationContent}>
           <View style={styles.conversationHeader}>
-            <Text style={styles.influencerName} numberOfLines={1}>{otherUserId}</Text>
+            <Text style={styles.influencerName} numberOfLines={1}>{displayName}</Text>
             <Text style={styles.timestamp}>
               {item.updated_at ? new Date(item.updated_at).toLocaleString() : ""}
             </Text>

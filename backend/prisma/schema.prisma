@@ -20,6 +20,9 @@ model User {
   bio              String?
   sector           String?
   avatar_url       String?
+  avatar_blob      Bytes?
+  avatar_mime_type String?
+  expo_push_token  String?
   default_currency String?
   rating_avg       Float?
   instagram_url    String?

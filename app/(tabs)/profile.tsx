@@ -3,6 +3,7 @@ import { Image } from "expo-image";
 import * as ImagePicker from 'expo-image-picker';
 import * as Clipboard from 'expo-clipboard';
 import * as Linking from 'expo-linking';
+import * as FileSystem from 'expo-file-system';
 import {
   Briefcase,
   Camera,
@@ -21,6 +22,7 @@ import {
 } from "lucide-react-native";
 import React, { useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View, ToastAndroid, Share, Platform } from "react-native";
+import { trpc } from "@/lib/trpc";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useUser } from "@/contexts/UserContext";
 import { useCampaigns } from "@/contexts/CampaignContext";
@@ -52,6 +54,8 @@ export default function ProfilePage() {
     router.replace("/");
   };
 
+  const setAvatarMutation = trpc.users.setAvatarBlob.useMutation();
+
   const handlePickInfluencerImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
@@ -67,10 +71,19 @@ export default function ProfilePage() {
     });
 
     if (!result.canceled && influencerProfile) {
-      await setInfluencerProfile({
-        ...influencerProfile,
-        avatarUrl: result.assets[0].uri,
-      });
+      try {
+        const asset = result.assets[0];
+        const base64 = await FileSystem.readAsStringAsync(asset.uri, { encoding: 'base64' as any });
+        const mime = asset.mimeType ?? "image/jpeg";
+        await setAvatarMutation.mutateAsync({ base64, mime_type: mime });
+        await setInfluencerProfile({
+          ...influencerProfile,
+          avatarUrl: asset.uri,
+        });
+      } catch (e) {
+        console.log("[Profile] Failed to upload avatar:", e);
+        Alert.alert("Erreur", "Impossible d'enregistrer la photo de profil");
+      }
     }
   };
 
@@ -183,10 +196,19 @@ export default function ProfilePage() {
     });
 
     if (!result.canceled && brandProfile) {
-      await setBrandProfile({
-        ...brandProfile,
-        photoUri: result.assets[0].uri,
-      });
+      try {
+        const asset = result.assets[0];
+        const base64 = await FileSystem.readAsStringAsync(asset.uri, { encoding: 'base64' as any });
+        const mime = asset.mimeType ?? "image/jpeg";
+        await setAvatarMutation.mutateAsync({ base64, mime_type: mime });
+        await setBrandProfile({
+          ...brandProfile,
+          photoUri: asset.uri,
+        });
+      } catch (e) {
+        console.log("[Profile] Failed to upload avatar:", e);
+        Alert.alert("Erreur", "Impossible d'enregistrer la photo de profil");
+      }
     }
   };
 
