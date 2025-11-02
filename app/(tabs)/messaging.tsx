@@ -14,6 +14,9 @@ export default function MessagingPage() {
 
   const convQuery = trpc.messaging.listConversations.useQuery(undefined, {
     enabled: !!currentUserId,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
+    refetchInterval: 4000,
   });
 
   const conversations = convQuery.data ?? [];
@@ -104,6 +107,8 @@ export default function MessagingPage() {
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.listContent}
             ItemSeparatorComponent={() => <View style={styles.separator} />}
+            onRefresh={() => convQuery.refetch()}
+            refreshing={convQuery.isRefetching}
           />
         )}
       </View>

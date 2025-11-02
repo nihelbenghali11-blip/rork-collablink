@@ -20,7 +20,13 @@ export default function ConversationPage() {
 
   const messagesQuery = trpc.messaging.listMessages.useQuery(
     { conversation_id: conversationId },
-    { enabled: !!conversationId }
+    {
+      enabled: !!conversationId,
+      refetchOnMount: true,
+      refetchOnWindowFocus: true,
+      refetchInterval: 3000,
+      staleTime: 0,
+    }
   );
   const markRead = trpc.messaging.markRead.useMutation();
   const sendMutation = trpc.messaging.sendMessage.useMutation();
@@ -65,8 +71,12 @@ export default function ConversationPage() {
     const first = msgs[0];
     const text = first.text || "";
     if (!text.trim()) return;
-    await sendMutation.mutateAsync({ conversation_id: conversationId, content: text.trim() });
-    await messagesQuery.refetch();
+    try {
+      await sendMutation.mutateAsync({ conversation_id: conversationId, content: text.trim() });
+      await messagesQuery.refetch();
+    } catch (e) {
+      console.log('[Conversation] send failed', e);
+    }
   }, [conversationId]);
 
   if (!conversationId) {

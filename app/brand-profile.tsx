@@ -4,7 +4,7 @@ import { ArrowLeft, CheckCircle2, Globe, Mail, MapPin, MessageCircle, Phone, Sta
 import React from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { trpc } from "@/lib/trpc";
+import { trpc, getBaseUrl } from "@/lib/trpc";
 import { useUser } from "@/contexts/UserContext";
 
 export default function BrandProfilePage() {
@@ -13,8 +13,22 @@ export default function BrandProfilePage() {
   const insets = useSafeAreaInsets();
   const { currentUserId } = useUser();
 
-  const profileQuery = trpc.users.getById.useQuery({ id: id! });
+  const profileQuery = trpc.users.getById.useQuery(
+    { id: String(id) },
+    { enabled: typeof id === 'string' && id.length > 0 }
+  );
   const brand = profileQuery.data;
+
+  if (profileQuery.isLoading) {
+    return (
+      <View style={styles.container}>
+        <Stack.Screen options={{ headerShown: false }} />
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>Chargement…</Text>
+        </View>
+      </View>
+    );
+  }
 
   if (!brand) {
     return (
@@ -83,7 +97,7 @@ export default function BrandProfilePage() {
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.profileHeader}>
           <Image
-            source={{ uri: brand.avatar_url ?? undefined }}
+            source={{ uri: brand.avatar_url || `${getBaseUrl()}/api/users/${brand.id}/avatar` }}
             style={styles.logo}
             contentFit="cover"
           />
