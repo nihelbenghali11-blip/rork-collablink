@@ -95,16 +95,7 @@ export default function CreateCampaignPage() {
         utils.counters.getBrandTotals.invalidate(),
       ]);
 
-      Alert.alert(
-        t("common.success"),
-        "Campaign created successfully!",
-        [
-          {
-            text: "OK",
-            onPress: () => router.replace("/(tabs)/dashboard" as any),
-          },
-        ]
-      );
+      router.replace("/(tabs)/dashboard" as any);
     } catch (error) {
       console.error("[CreateCampaign] Failed to create campaign:", error);
       Alert.alert(
