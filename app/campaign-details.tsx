@@ -114,6 +114,19 @@ export default function CampaignDetailsPage() {
       setEditedObjectives(dbCampaign.objectives || "");
       setEditedRequirements(dbCampaign.requirements || "");
       setEditedHashtags(dbCampaign.hashtags || "");
+      if (Array.isArray(dbCampaign.collaborators)) {
+        const mapped: Collaborator[] = (dbCampaign.collaborators as any[])
+          .filter((c: any) => !c.deleted_at)
+          .map((c: any) => ({
+            id: c.id,
+            firstName: c.first_name,
+            lastName: c.last_name,
+            phone: c.phone ?? "",
+            amount: c.agreed_amount ?? 0,
+            currency: c.currency ?? "EUR",
+          }));
+        setCollaborators(mapped);
+      }
     }
   }, [dbCampaign]);
 
@@ -133,6 +146,14 @@ export default function CampaignDetailsPage() {
 
   // derived values
   const totalSpent = collaborators.reduce((sum, c) => sum + c.amount, 0);
+
+  const engagedCount = useMemo(() => {
+    const fromState = collaborators.length;
+    const fromCampaign = Array.isArray(dbCampaign?.collaborators)
+      ? (dbCampaign.collaborators as any[]).filter((c: any) => !c.deleted_at).length
+      : 0;
+    return Math.max(fromState, fromCampaign);
+  }, [collaborators.length, dbCampaign?.collaborators]);
 
   // handlers (they are closures over stable hooks above)
   const handleAddCollaborator = async () => {
@@ -376,7 +397,7 @@ export default function CampaignDetailsPage() {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>
-                {t("common.engagedInfluencers")} ({collaborators.length})
+                {t("common.engagedInfluencers")} ({engagedCount})
               </Text>
               <Pressable
                 style={styles.addButton}
