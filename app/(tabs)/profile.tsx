@@ -34,6 +34,7 @@ export default function ProfilePage() {
   const { userType, brandProfile, influencerProfile, logout, setBrandProfile, setInfluencerProfile } = useUser();
   const utils = trpc.useUtils();
   const meQuery = trpc.users.getProfile.useQuery(undefined, { refetchOnWindowFocus: true });
+  const updateProfileMutation = trpc.users.updateProfile.useMutation();
   const { campaigns } = useCampaigns();
   const [isEditingAbout, setIsEditingAbout] = useState(false);
   const [editWebsite, setEditWebsite] = useState(brandProfile?.website || "");
@@ -148,20 +149,36 @@ export default function ProfilePage() {
       return;
     }
 
-    if (influencerProfile) {
-      await setInfluencerProfile({
-        ...influencerProfile,
-        fullName: editFullName,
-        bio: editBio,
-        email: editEmail,
-        instagramUrl: editInstagram,
-        tiktokUrl: editTiktok,
-        facebookUrl: editFacebook,
-        snapchatUrl: editSnapchat,
-        primaryPlatform: editPrimaryPlatform,
-        followersCount: parseInt(editFollowersCount) || 0,
+    try {
+      await updateProfileMutation.mutateAsync({
+        name: editFullName || undefined,
+        email: editEmail || undefined,
+        bio: editBio || undefined,
+        instagram_url: editInstagram || undefined,
+        tiktok_url: editTiktok || undefined,
+        facebook_url: editFacebook || undefined,
+        snapchat_url: editSnapchat || undefined,
+        primary_platform: editPrimaryPlatform,
+        followers_count: parseInt(editFollowersCount) || 0,
       });
+      await meQuery.refetch();
+      if (influencerProfile) {
+        await setInfluencerProfile({
+          ...influencerProfile,
+          fullName: editFullName,
+          bio: editBio,
+          email: editEmail,
+          instagramUrl: editInstagram,
+          tiktokUrl: editTiktok,
+          facebookUrl: editFacebook,
+          snapchatUrl: editSnapchat,
+          primaryPlatform: editPrimaryPlatform,
+          followersCount: parseInt(editFollowersCount) || 0,
+        });
+      }
       setIsEditingInfluencerAbout(false);
+    } catch (e) {
+      Alert.alert('Erreur', "Impossible d'enregistrer le profil");
     }
   };
 
@@ -254,15 +271,26 @@ export default function ProfilePage() {
   };
 
   const handleSaveAbout = async () => {
-    if (brandProfile) {
-      await setBrandProfile({
-        ...brandProfile,
-        website: editWebsite,
-        phone: editPhone,
-        address: editAddress,
-        description: editDescription,
+    try {
+      await updateProfileMutation.mutateAsync({
+        website: editWebsite || undefined,
+        phone: editPhone || undefined,
+        address: editAddress || undefined,
+        bio: editDescription || undefined,
       });
+      await meQuery.refetch();
+      if (brandProfile) {
+        await setBrandProfile({
+          ...brandProfile,
+          website: editWebsite,
+          phone: editPhone,
+          address: editAddress,
+          description: editDescription,
+        });
+      }
       setIsEditingAbout(false);
+    } catch (e) {
+      Alert.alert('Erreur', "Impossible d'enregistrer le profil");
     }
   };
 

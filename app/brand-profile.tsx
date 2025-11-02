@@ -174,10 +174,13 @@ export default function BrandProfilePage() {
           </View>
         </View>
 
-        <View style={styles.footer}>
-          <Pressable style={styles.contactButton} onPress={handleContact}>
+        <View style={[styles.footer, { flexDirection: "row", gap: 12 }] }>
+          <Pressable style={[styles.contactButton, { flex: 1 }]} onPress={handleContact}>
             <MessageCircle size={22} color="#FFFFFF" />
             <Text style={styles.contactButtonText}>Contacter</Text>
+          </Pressable>
+          <Pressable style={[styles.contactButton, { flex: 1, backgroundColor: "#10B981" }]} onPress={() => router.push(`/rate?rateeId=${encodeURIComponent(brand.id)}&name=${encodeURIComponent(brand.name ?? "")}`)}>
+            <Text style={styles.contactButtonText}>Noter</Text>
           </Pressable>
         </View>
       </ScrollView>

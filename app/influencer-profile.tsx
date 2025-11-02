@@ -225,6 +225,12 @@ export default function InfluencerProfilePage() {
               <MessageCircle size={20} color="#FFFFFF" />
               <Text style={styles.primaryButtonText}>{t("profile.message")}</Text>
             </Pressable>
+            <Pressable
+              style={[styles.primaryButton, { backgroundColor: "#10B981" }]}
+              onPress={() => router.push(`/rate?rateeId=${encodeURIComponent(id!)}&name=${encodeURIComponent(influencer.name ?? "")}`)}
+            >
+              <Text style={styles.primaryButtonText}>{t("profile.rate")}</Text>
+            </Pressable>
           </View>
         </View>
       </ScrollView>
