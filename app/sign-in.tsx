@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { trpc } from "@/lib/trpc";
@@ -15,9 +15,14 @@ export default function SignInPage() {
 
   const loginMutation = trpc.users.login.useMutation();
   const [loading, setLoading] = useState<boolean>(false);
+  const [errorText, setErrorText] = useState<string>("");
 
   const onSubmit = async () => {
-    if (!email || !password) return;
+    if (!email || !password) {
+      setErrorText("Please enter email and password");
+      return;
+    }
+    setErrorText("");
     setLoading(true);
     try {
       const user = await loginMutation.mutateAsync({ email, password });
@@ -48,7 +53,8 @@ export default function SignInPage() {
       router.replace("/(tabs)/dashboard" as any);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Unknown error";
-      Alert.alert("Sign in failed", msg);
+      const normalized = /invalid|not found|wrong/i.test(msg) ? "Invalid email or password" : msg;
+      setErrorText(normalized);
     } finally {
       setLoading(false);
     }
@@ -59,6 +65,11 @@ export default function SignInPage() {
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.title}>{t("auth.signIn")}</Text>
         <View style={styles.form}>
+          {errorText ? (
+            <View style={styles.errorBox}>
+              <Text style={styles.errorText} testID="signin-error">{errorText}</Text>
+            </View>
+          ) : null}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>{t("auth.email")}</Text>
             <TextInput
@@ -122,4 +133,16 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: { backgroundColor: "#D1D5DB" },
   buttonText: { color: "#FFFFFF", fontWeight: "700" as const, fontSize: 16 },
+  errorBox: {
+    backgroundColor: "#FEE2E2",
+    borderColor: "#FCA5A5",
+    borderWidth: 1,
+    padding: 12,
+    borderRadius: 10,
+  },
+  errorText: {
+    color: "#B91C1C",
+    fontSize: 14,
+    fontWeight: "600" as const,
+  },
 });
