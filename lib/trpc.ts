@@ -7,14 +7,10 @@ import { Platform } from "react-native";
 
 export const trpc = createTRPCReact<AppRouter>();
 
-// Hardcode backend base URL so Expo web and physical device both hit the same backend.
-// For local dev without ngrok you would replace with your machine IP on LAN.
 export const getBaseUrl = () => {
-  
   return "https://towanda-proauthor-carlos.ngrok-free.dev";
 };
 
-// In-memory cache of userId so we do not hit AsyncStorage every call
 let currentUserId: string | null = null;
 
 export const setTRPCUserId = (userId: string | null) => {
@@ -34,11 +30,10 @@ const getUserIdFromStorage = async (): Promise<string | null> => {
   return null;
 };
 
-// Client used by provider at app root
 export const trpcClient = trpc.createClient({
   links: [
     httpLink({
-      url: `${getBaseUrl()}/trpc`,
+      url: `${getBaseUrl()}/api/trpc`,
       transformer: superjson,
       async headers() {
         const userId = currentUserId || (await getUserIdFromStorage());
@@ -53,7 +48,7 @@ export const trpcClient = trpc.createClient({
             ...(options?.headers || {}),
             "ngrok-skip-browser-warning": "true",
           },
-          method: options?.method ?? "POST",
+          method: "POST",
           mode: Platform.OS === "web" ? "cors" : undefined,
           credentials: "omit",
           keepalive: false,

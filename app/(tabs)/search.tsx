@@ -37,8 +37,7 @@ export default function SearchPage() {
     const q = (searchQuery?.trim()?.length ?? 0) > 0 ? searchQuery.trim() : undefined;
     const platform = selectedPlatform ?? undefined;
     const sortFollowersLocal = sortByFollowers ?? undefined;
-    const hasAny = q || platform || sortFollowersLocal;
-    return hasAny ? { q, platform, sortFollowers: sortFollowersLocal, limit: 100 } : undefined;
+    return { q, platform, sortFollowers: sortFollowersLocal, limit: 100 };
   }, [searchQuery, selectedPlatform, sortByFollowers]);
 
   const influencersQuery = trpc.users.searchInfluencers.useQuery(
@@ -48,7 +47,7 @@ export default function SearchPage() {
 
   const brandsInput = useMemo(() => {
     const q = (searchQuery?.trim()?.length ?? 0) > 0 ? searchQuery.trim() : undefined;
-    return q ? { q, limit: 100 } : undefined;
+    return { q, limit: 100 };
   }, [searchQuery]);
 
   const brandsQuery = trpc.users.searchBrands.useQuery(
