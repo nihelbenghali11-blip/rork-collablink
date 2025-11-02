@@ -1,10 +1,10 @@
 import { Stack, useRouter } from "expo-router";
 import { Image } from "expo-image";
 import { MessageCircle } from "lucide-react-native";
-import React from "react";
+import React, { useEffect, useMemo } from "react";
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { trpc } from "@/lib/trpc";
+import { getBaseUrl, trpc } from "@/lib/trpc";
 import { useUser } from "@/contexts/UserContext";
 
 export default function MessagingPage() {
@@ -26,9 +26,15 @@ export default function MessagingPage() {
       : null;
 
     const displayName = otherUser?.name ?? (otherUser?.id ?? "");
-    const avatarUrl = otherUser?.avatar_url
-      ? otherUser.avatar_url
-      : `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=E5E7EB&color=111827`;
+    const fallback = `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=E5E7EB&color=111827`;
+    const avatarUrl = otherUser?.avatar_url || `${getBaseUrl()}/api/users/${otherUser?.id}/avatar` || fallback;
+
+    const lastSeenISO: string | null = otherUser?.updated_at ?? null;
+    const isOnline = (() => {
+      if (!lastSeenISO) return false;
+      const last = new Date(lastSeenISO).getTime();
+      return Date.now() - last < 90 * 1000;
+    })();
 
     return (
       <Pressable
@@ -40,7 +46,10 @@ export default function MessagingPage() {
         }}
         testID={`conversation-${item.id}`}
       >
-        <Image source={{ uri: avatarUrl }} style={styles.avatar} contentFit="cover" />
+        <View>
+          <Image source={{ uri: avatarUrl }} style={styles.avatar} contentFit="cover" />
+          {isOnline && <View style={styles.onlineDot} />}
+        </View>
         <View style={styles.conversationContent}>
           <View style={styles.conversationHeader}>
             <Text style={styles.influencerName} numberOfLines={1}>{displayName}</Text>
@@ -58,6 +67,20 @@ export default function MessagingPage() {
       </Pressable>
     );
   };
+
+  useEffect(() => {
+    let timer: any;
+    const ping = async () => {
+      try {
+        await fetch(`${getBaseUrl()}/api/presence/ping`, { method: 'POST', headers: { 'x-user-id': currentUserId || '' } });
+      } catch {}
+    };
+    if (currentUserId) {
+      ping();
+      timer = setInterval(ping, 30000);
+    }
+    return () => timer && clearInterval(timer);
+  }, [currentUserId]);
 
   return (
     <>
@@ -118,6 +141,17 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     marginRight: 12,
     backgroundColor: "#F3F4F6",
+  },
+  onlineDot: {
+    position: "absolute",
+    right: 12,
+    bottom: 6,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: "#10B981",
+    borderColor: "#FFFFFF",
+    borderWidth: 2,
   },
   conversationContent: {
     flex: 1,

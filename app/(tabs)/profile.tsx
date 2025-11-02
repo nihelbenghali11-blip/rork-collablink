@@ -22,7 +22,7 @@ import {
 } from "lucide-react-native";
 import React, { useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View, ToastAndroid, Share, Platform } from "react-native";
-import { trpc } from "@/lib/trpc";
+import { trpc, getBaseUrl } from "@/lib/trpc";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useUser } from "@/contexts/UserContext";
 import { useCampaigns } from "@/contexts/CampaignContext";
@@ -78,7 +78,7 @@ export default function ProfilePage() {
         await setAvatarMutation.mutateAsync({ base64, mime_type: mime });
         await setInfluencerProfile({
           ...influencerProfile,
-          avatarUrl: asset.uri,
+          avatarUrl: `${getBaseUrl()}/api/users/${influencerProfile.userId}/avatar?ts=${Date.now()}`,
         });
       } catch (e) {
         console.log("[Profile] Failed to upload avatar:", e);
@@ -203,7 +203,7 @@ export default function ProfilePage() {
         await setAvatarMutation.mutateAsync({ base64, mime_type: mime });
         await setBrandProfile({
           ...brandProfile,
-          photoUri: asset.uri,
+          photoUri: `${getBaseUrl()}/api/users/${brandProfile.userId}/avatar?ts=${Date.now()}`,
         });
       } catch (e) {
         console.log("[Profile] Failed to upload avatar:", e);
@@ -408,7 +408,7 @@ export default function ProfilePage() {
           <Pressable onPress={handlePickInfluencerImage}>
             <Image
               source={{
-                uri: influencerProfile?.avatarUrl || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400",
+                uri: influencerProfile?.avatarUrl || `${getBaseUrl()}/api/users/${influencerProfile?.userId}/avatar` || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400",
               }}
               style={styles.profileAvatar}
               contentFit="cover"

@@ -1,44 +1,20 @@
 import { useLocalSearchParams, useRouter, Stack } from "expo-router";
 import { Image } from "expo-image";
-import { ArrowLeft, Send, Paperclip, X } from "lucide-react-native";
-import React, { useState, useRef, useEffect } from "react";
-import {
-  FlatList,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-  KeyboardAvoidingView,
-  Platform,
-  Linking,
-  ActivityIndicator,
-  Alert,
-} from "react-native";
+import { ArrowLeft } from "lucide-react-native";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import * as DocumentPicker from "expo-document-picker";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { MessageAttachment } from "@/contexts/MessagingContext";
-import { trpc } from "@/lib/trpc";
+import { trpc, getBaseUrl } from "@/lib/trpc";
 import { useUser } from "@/contexts/UserContext";
+import { GiftedChat, Bubble, InputToolbar, IMessage, Send } from "react-native-gifted-chat";
 
 export default function ConversationPage() {
-  const { id, influencerId, userId, name } = useLocalSearchParams<{ 
-    id?: string; 
-    influencerId?: string;
-    userId?: string;
-    name?: string;
-  }>();
+  const { id, userId, name } = useLocalSearchParams<{ id?: string; userId?: string; name?: string }>();
   const router = useRouter();
   const { t } = useLanguage();
-  const flatListRef = useRef<FlatList>(null);
   const insets = useSafeAreaInsets();
   const { currentUserId } = useUser();
-  const sendMutation = trpc.messaging.sendMessage.useMutation();
-
-  const [inputText, setInputText] = useState<string>("");
-  const [selectedAttachments, setSelectedAttachments] = useState<MessageAttachment[]>([]);
-  const [isUploading, setIsUploading] = useState<boolean>(false);
 
   const conversationId = id as string;
 
@@ -46,160 +22,52 @@ export default function ConversationPage() {
     { conversation_id: conversationId },
     { enabled: !!conversationId }
   );
+  const markRead = trpc.messaging.markRead.useMutation();
+  const sendMutation = trpc.messaging.sendMessage.useMutation();
 
-  const messages = messagesQuery.data ?? [];
-
+  const otherId = userId as string | undefined;
   const displayName = name || userId || "Unknown";
-  const displayAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=E5E7EB&color=111827`;
+  const displayAvatar = otherId ? `${getBaseUrl()}/api/users/${otherId}/avatar` : `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=E5E7EB&color=111827`;
 
   useEffect(() => {
-    if (flatListRef.current && messages.length > 0) {
-      setTimeout(() => {
-        flatListRef.current?.scrollToEnd({ animated: true });
-      }, 100);
+    if (conversationId) {
+      markRead.mutate({ conversation_id: conversationId });
     }
-  }, [messages]);
+  }, [conversationId]);
 
-  const handlePickDocument = async () => {
-    try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: ["image/*", "application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
-        copyToCacheDirectory: true,
-        multiple: true,
-      });
-
-      if (!result.canceled && result.assets) {
-        const newAttachments: MessageAttachment[] = result.assets.map((asset) => ({
-          id: Date.now().toString() + Math.random().toString(),
-          type: asset.mimeType?.startsWith("image/") ? "image" : "document",
-          uri: asset.uri,
-          name: asset.name,
-          mimeType: asset.mimeType,
-          size: asset.size,
-        }));
-
-        setSelectedAttachments([...selectedAttachments, ...newAttachments]);
-      }
-    } catch (error) {
-      console.error("Error picking document:", error);
-      Alert.alert("Error", "Failed to pick document");
+  useEffect(() => {
+    if (conversationId) {
+      markRead.mutate({ conversation_id: conversationId });
     }
-  };
+  }, [messagesQuery.data?.length]);
 
-  const removeAttachment = (attachmentId: string) => {
-    setSelectedAttachments(selectedAttachments.filter((att) => att.id !== attachmentId));
-  };
+  const giftedMessages: IMessage[] = useMemo(() => {
+    const arr = messagesQuery.data ?? [];
+    return arr.map((m: any) => {
+      const isMine = currentUserId === m.sender_id;
+      return {
+        _id: m.id,
+        text: m.content || "",
+        createdAt: m.created_at ? new Date(m.created_at) : new Date(),
+        user: {
+          _id: isMine ? currentUserId || "me" : otherId || "other",
+          name: isMine ? undefined : displayName,
+          avatar: isMine ? undefined : displayAvatar,
+        },
+        image: m.attachment && m.attachment.mime_type.startsWith("image/") ? m.attachment.storage_url : undefined,
+        sent: true,
+        received: !!m.read_at,
+      } as IMessage;
+    }).reverse();
+  }, [messagesQuery.data, currentUserId, otherId, displayName, displayAvatar]);
 
-  const handleSend = async () => {
-    if (inputText.trim().length === 0 && selectedAttachments.length === 0) return;
-
-    setIsUploading(true);
-    try {
-      if (!currentUserId) throw new Error("No user");
-
-      await sendMutation.mutateAsync({
-        conversation_id: conversationId,
-        content: inputText.trim(),
-      });
-      await messagesQuery.refetch();
-
-      setInputText("");
-      setSelectedAttachments([]);
-    } catch (error) {
-      console.error("Error sending message:", error);
-      Alert.alert("Error", "Failed to send message");
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  const renderAttachment = (attachment: MessageAttachment, isInMessage: boolean = false) => {
-    if (attachment.type === "image") {
-      return (
-        <Pressable
-          key={attachment.id}
-          onPress={() => {
-            if (isInMessage && attachment.uri) {
-              Linking.openURL(attachment.uri).catch(() => {
-                Alert.alert("Error", "Failed to open image");
-              });
-            }
-          }}
-        >
-          <Image
-            source={{ uri: attachment.uri }}
-            style={isInMessage ? styles.messageImage : styles.previewImage}
-            contentFit="cover"
-          />
-        </Pressable>
-      );
-    }
-
-    return (
-      <Pressable
-        key={attachment.id}
-        style={styles.documentPreview}
-        onPress={() => {
-          if (isInMessage && attachment.uri) {
-            Linking.openURL(attachment.uri).catch(() => {
-              Alert.alert("Error", "Failed to open document");
-            });
-          }
-        }}
-      >
-        <Text style={styles.documentIcon}>📄</Text>
-        <Text style={styles.documentName} numberOfLines={1}>
-          {attachment.name}
-        </Text>
-      </Pressable>
-    );
-  };
-
-  const renderMessage = ({ item }: { item: any }) => {
-    const isUser = currentUserId && item.sender_id === currentUserId;
-
-    return (
-      <View
-        style={[
-          styles.messageContainer,
-          isUser ? styles.userMessageContainer : styles.influencerMessageContainer,
-        ]}
-      >
-        <View
-          style={[
-            styles.messageBubble,
-            isUser ? styles.userBubble : styles.influencerBubble,
-          ]}
-        >
-          {item.attachment && (
-            <View style={styles.attachmentsContainer}>
-              {renderAttachment(
-                {
-                  id: item.attachment.id,
-                  type: item.attachment.mime_type.startsWith("image/") ? "image" : "document",
-                  uri: item.attachment.storage_url,
-                  name: item.attachment.file_name,
-                  mimeType: item.attachment.mime_type,
-                  size: item.attachment.size,
-                },
-                true
-              )}
-            </View>
-          )}
-
-          {item.content && (
-            <Text style={[styles.messageText, isUser && styles.userMessageText]}>
-              {item.content}
-            </Text>
-          )}
-
-          <Text style={[styles.timestamp, isUser && styles.userTimestamp]}>
-            {item.created_at ? new Date(item.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : ""}
-          </Text>
-        </View>
-      </View>
-    );
-  };
+  const onSend = useCallback(async (msgs: IMessage[]) => {
+    const first = msgs[0];
+    const text = first.text || "";
+    if (!text.trim()) return;
+    await sendMutation.mutateAsync({ conversation_id: conversationId, content: text.trim() });
+    await messagesQuery.refetch();
+  }, [conversationId]);
 
   if (!conversationId) {
     return (
@@ -211,118 +79,58 @@ export default function ConversationPage() {
 
   return (
     <>
-      <Stack.Screen
-        options={{
-          headerShown: false,
-        }}
-      />
-      <KeyboardAvoidingView
-        style={styles.container}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={0}
-      >
+      <Stack.Screen options={{ headerShown: false }} />
+      <View style={styles.container}>
         <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-          <Pressable
-            onPress={() => router.back()}
-            style={styles.backButton}
-          >
+          <Pressable onPress={() => router.back()} style={styles.backButton}>
             <ArrowLeft size={24} color="#111827" />
           </Pressable>
           <View style={styles.headerContent}>
-            <Image
-              source={{ uri: displayAvatar }}
-              style={styles.headerAvatar}
-              contentFit="cover"
-            />
+            <Image source={{ uri: displayAvatar }} style={styles.headerAvatar} contentFit="cover" />
             <Text style={styles.headerName}>{displayName}</Text>
           </View>
           <View style={{ width: 40 }} />
         </View>
 
-        <FlatList
-          ref={flatListRef}
-          data={messages}
-          renderItem={renderMessage}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.messagesList}
-          onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
-          ListEmptyComponent={() => (
-            <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingTop: 40 }}>
-              <Text style={{ color: "#6B7280" }}>No messages yet</Text>
-            </View>
-          )}
-        />
-
-        {selectedAttachments.length > 0 && (
-          <View style={styles.attachmentPreviewContainer}>
-            <FlatList
-              horizontal
-              data={selectedAttachments}
-              keyExtractor={(item) => item.id}
-              renderItem={({ item }) => (
-                <View style={styles.previewWrapper}>
-                  {renderAttachment(item, false)}
-                  <Pressable
-                    style={styles.removeButton}
-                    onPress={() => removeAttachment(item.id)}
-                  >
-                    <X size={16} color="#FFFFFF" />
-                  </Pressable>
-                </View>
-              )}
-              contentContainerStyle={styles.attachmentPreviewList}
+        <GiftedChat
+          messages={giftedMessages}
+          onSend={(msgs) => onSend(msgs as IMessage[])}
+          user={{ _id: currentUserId || "me" }}
+          isTyping={false}
+          renderBubble={(props) => (
+            <Bubble
+              {...props}
+              wrapperStyle={{
+                left: { backgroundColor: "#FFFFFF", borderRadius: 18, borderBottomLeftRadius: 4, borderWidth: 1, borderColor: "#E5E7EB" },
+                right: { backgroundColor: "#6366F1", borderRadius: 18, borderBottomRightRadius: 4 },
+              }}
+              textStyle={{ right: { color: "#FFFFFF" }, left: { color: "#374151" } }}
             />
-          </View>
-        )}
-
-        <View style={[styles.inputContainer, { paddingBottom: insets.bottom }]}>
-          <Pressable
-            onPress={handlePickDocument}
-            style={styles.attachButton}
-            disabled={isUploading}
-          >
-            <Paperclip size={20} color="#6366F1" />
-          </Pressable>
-
-          <TextInput
-            style={styles.input}
-            placeholder={t("profile.writeMessage")}
-            placeholderTextColor="#9CA3AF"
-            value={inputText}
-            onChangeText={setInputText}
-            multiline
-            maxLength={1000}
-            editable={!isUploading}
-          />
-
-          <Pressable
-            onPress={handleSend}
-            style={[
-              styles.sendButton,
-              (inputText.trim().length === 0 && selectedAttachments.length === 0) && styles.sendButtonDisabled,
-            ]}
-            disabled={inputText.trim().length === 0 && selectedAttachments.length === 0 || isUploading}
-          >
-            {isUploading ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <Send 
-                size={20} 
-                color={(inputText.trim().length > 0 || selectedAttachments.length > 0) ? "#FFFFFF" : "#9CA3AF"} 
-              />
-            )}
-          </Pressable>
-        </View>
-      </KeyboardAvoidingView>
+          )}
+          renderInputToolbar={(props) => (
+            <InputToolbar
+              {...props}
+              containerStyle={{ borderTopColor: "#E5E7EB", borderTopWidth: 1, backgroundColor: "#FFFFFF" }}
+              primaryStyle={{ alignItems: "center" }}
+            />
+          )}
+          renderSend={(props) => (
+            <Send {...props} containerStyle={{ justifyContent: "center", alignItems: "center", paddingRight: 12 }}>
+              <Text style={{ color: "#6366F1", fontWeight: "700" }}>Send</Text>
+            </Send>
+          )}
+          timeTextStyle={{ left: { color: "#9CA3AF" }, right: { color: "#E0E7FF" } }}
+          alwaysShowSend
+          scrollToBottom
+          showUserAvatar
+        />
+      </View>
     </>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F9FAFB",
-  },
+  container: { flex: 1, backgroundColor: "#F9FAFB" },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -332,196 +140,11 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderBottomWidth: 1,
     borderBottomColor: "#E5E7EB",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
   },
-  backButton: {
-    padding: 8,
-  },
-  headerContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    flex: 1,
-    justifyContent: "center",
-  },
-  headerAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "#F3F4F6",
-  },
-  headerName: {
-    fontSize: 17,
-    fontWeight: "700" as const,
-    color: "#111827",
-  },
-  messagesList: {
-    paddingHorizontal: 16,
-    paddingVertical: 20,
-    flexGrow: 1,
-  },
-  messageContainer: {
-    marginBottom: 12,
-    maxWidth: "75%",
-  },
-  userMessageContainer: {
-    alignSelf: "flex-end",
-  },
-  influencerMessageContainer: {
-    alignSelf: "flex-start",
-  },
-  messageBubble: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 18,
-  },
-  userBubble: {
-    backgroundColor: "#6366F1",
-    borderBottomRightRadius: 4,
-  },
-  influencerBubble: {
-    backgroundColor: "#FFFFFF",
-    borderBottomLeftRadius: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  attachmentsContainer: {
-    marginBottom: 8,
-    gap: 8,
-  },
-  messageImage: {
-    width: 200,
-    height: 150,
-    borderRadius: 12,
-    backgroundColor: "#F3F4F6",
-  },
-  documentPreview: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: "#F3F4F6",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  documentIcon: {
-    fontSize: 24,
-  },
-  documentName: {
-    fontSize: 14,
-    color: "#374151",
-    flex: 1,
-  },
-  messageText: {
-    fontSize: 15,
-    lineHeight: 20,
-    color: "#374151",
-    marginBottom: 4,
-  },
-  userMessageText: {
-    color: "#FFFFFF",
-  },
-  timestamp: {
-    fontSize: 11,
-    color: "#9CA3AF",
-  },
-  userTimestamp: {
-    color: "#E0E7FF",
-  },
-  attachmentPreviewContainer: {
-    backgroundColor: "#FFFFFF",
-    borderTopWidth: 1,
-    borderTopColor: "#E5E7EB",
-    paddingVertical: 12,
-  },
-  attachmentPreviewList: {
-    paddingHorizontal: 16,
-    gap: 12,
-  },
-  previewWrapper: {
-    position: "relative",
-  },
-  previewImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 8,
-    backgroundColor: "#F3F4F6",
-  },
-  removeButton: {
-    position: "absolute",
-    top: -8,
-    right: -8,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: "#EF4444",
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  inputContainer: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: "#FFFFFF",
-    borderTopWidth: 1,
-    borderTopColor: "#E5E7EB",
-    gap: 12,
-  },
-  attachButton: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  input: {
-    flex: 1,
-    backgroundColor: "#F3F4F6",
-    borderRadius: 24,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 15,
-    color: "#111827",
-    maxHeight: 100,
-  },
-  sendButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "#6366F1",
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#6366F1",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  sendButtonDisabled: {
-    backgroundColor: "#E5E7EB",
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#F9FAFB",
-  },
-  errorText: {
-    fontSize: 16,
-    color: "#6B7280",
-  },
+  backButton: { padding: 8 },
+  headerContent: { flexDirection: "row", alignItems: "center", gap: 12, flex: 1, justifyContent: "center" },
+  headerAvatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: "#F3F4F6" },
+  headerName: { fontSize: 17, fontWeight: "700" as const, color: "#111827" },
+  errorContainer: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#F9FAFB" },
+  errorText: { fontSize: 16, color: "#6B7280" },
 });

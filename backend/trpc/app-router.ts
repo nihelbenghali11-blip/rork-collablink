@@ -58,6 +58,7 @@ export const appRouter = createTRPCRouter({
     openConversation,
     sendMessage,
     listMessages,
+    markRead: (await import('./routes/messaging/markRead')).default,
   }),
 
   ratings: createTRPCRouter({
