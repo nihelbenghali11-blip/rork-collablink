@@ -829,7 +829,7 @@ export default function CampaignDetailsPage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0B1220",
+    backgroundColor: "#FFFFFF",
   },
   content: {
     padding: 16,
