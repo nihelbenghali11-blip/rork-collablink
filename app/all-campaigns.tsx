@@ -3,8 +3,7 @@ import React from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useUser } from "@/contexts/UserContext";
-import { useCampaigns } from "@/contexts/CampaignContext";
-
+import { trpc } from "@/lib/trpc";
 
 const getCurrencySymbol = (currency: string): string => {
   const symbols: { [key: string]: string } = {
@@ -20,15 +19,14 @@ const getCurrencySymbol = (currency: string): string => {
 
 export default function AllCampaignsPage() {
   const { t } = useLanguage();
-  const { brandProfile, influencerProfile, userType } = useUser();
-  const { getCampaignsByBrand, getCampaignsByUserId } = useCampaigns();
+  const { userType } = useUser();
   const router = useRouter();
 
-  const brandCampaigns = brandProfile ? getCampaignsByBrand(brandProfile.id) : [];
-  const influencerCampaigns = influencerProfile ? getCampaignsByUserId(influencerProfile.userId) : [];
-  const activeCampaigns = userType === "brand" 
-    ? brandCampaigns.filter(c => c.status === "active")
-    : influencerCampaigns.filter(c => c.status === "active");
+  const listQuery = trpc.campaigns.listActiveByOwner.useQuery(undefined, {
+    enabled: userType === "brand",
+  });
+
+  const activeCampaigns = listQuery.data ?? [];
 
   return (
     <>
@@ -42,19 +40,18 @@ export default function AllCampaignsPage() {
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
         {activeCampaigns.length > 0 ? (
           <View style={styles.campaignsList}>
-            {activeCampaigns.map((campaign) => (
+            {activeCampaigns.map((campaign: any) => (
               <Pressable 
                 key={campaign.id} 
                 style={styles.campaignCard}
                 onPress={() => router.push(`/campaign-details?id=${campaign.id}` as any)}
+                testID={`card-active-${campaign.id}`}
               >
                 <View style={styles.campaignHeader}>
                   <View style={styles.campaignInfo}>
                     <Text style={styles.campaignName}>{campaign.name}</Text>
                     <Text style={styles.campaignBrand}>
-                      {userType === "brand" 
-                        ? `${(campaign.collaborators?.length || 0)} ${t("common.engagedInfluencers")}`
-                        : campaign.brandName}
+                      {campaign.brand_name}
                     </Text>
                   </View>
                   <View style={styles.statusActive}>
@@ -63,7 +60,7 @@ export default function AllCampaignsPage() {
                 </View>
                 <View style={styles.campaignDetails}>
                   <View style={styles.campaignDetail}>
-                    <Text style={styles.campaignDetailText}>{getCurrencySymbol(campaign.currency || "USD")}{campaign.budget.toLocaleString()}</Text>
+                    <Text style={styles.campaignDetailText}>{getCurrencySymbol(campaign.revenue_currency || "EUR")} {(campaign.revenue_amount ?? 0).toLocaleString()}</Text>
                   </View>
                 </View>
               </Pressable>

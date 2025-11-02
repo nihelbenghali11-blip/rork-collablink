@@ -1,6 +1,6 @@
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { Plus, Edit2, Trash2, X, Check } from "lucide-react-native";
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { 
   Alert,
   Modal, 
@@ -33,21 +33,25 @@ const getCurrencySymbol = (currency: string): string => {
 
 export default function CampaignDetailsPage() {
   const { id } = useLocalSearchParams();
+  const campaignId = useMemo(() => (Array.isArray(id) ? id[0] : id) ?? "", [id]);
   const { t } = useLanguage();
   const router = useRouter();
-  const { campaigns, updateCampaign, deleteCampaign } = useCampaigns();
+  const { updateCampaign, deleteCampaign } = useCampaigns();
   const { userType } = useUser();
 
-  const campaign = campaigns.find((c) => c.id === id);
+  const getQuery = trpc.campaigns.legacy.get.useQuery(
+    { id: campaignId },
+    { enabled: !!campaignId }
+  );
 
   const collaboratorsQuery = trpc.collaborators.list.useQuery(
-    { campaign_id: campaign?.id || "" },
-    { enabled: !!campaign?.id }
+    { campaign_id: campaignId },
+    { enabled: !!campaignId }
   );
 
-  const [collaborators, setCollaborators] = useState<Collaborator[]>(
-    campaign?.collaborators || []
-  );
+  const dbCampaign = getQuery.data as any;
+
+  const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -62,10 +66,10 @@ export default function CampaignDetailsPage() {
   const [isEditingObjectives, setIsEditingObjectives] = useState(false);
   const [isEditingRequirements, setIsEditingRequirements] = useState(false);
   const [isEditingHashtags, setIsEditingHashtags] = useState(false);
-  const [editedPlatforms, setEditedPlatforms] = useState<string[]>(campaign?.platforms || []);
-  const [editedObjectives, setEditedObjectives] = useState(campaign?.objectives || "");
-  const [editedRequirements, setEditedRequirements] = useState(campaign?.requirements || "");
-  const [editedHashtags, setEditedHashtags] = useState(campaign?.hashtags || "");
+  const [editedPlatforms, setEditedPlatforms] = useState<string[]>([]);
+  const [editedObjectives, setEditedObjectives] = useState("");
+  const [editedRequirements, setEditedRequirements] = useState("");
+  const [editedHashtags, setEditedHashtags] = useState("");
   const [showPlatformPicker, setShowPlatformPicker] = useState(false);
 
   const platformOptions = [
@@ -75,7 +79,45 @@ export default function CampaignDetailsPage() {
     { id: "snapchat", name: "Snapchat" },
   ];
 
-  if (!campaign) {
+  useEffect(() => {
+    if (dbCampaign) {
+      setEditedObjectives(dbCampaign.objectives || "");
+      setEditedRequirements(dbCampaign.requirements || "");
+      setEditedHashtags(dbCampaign.hashtags || "");
+    }
+  }, [dbCampaign]);
+
+  useEffect(() => {
+    if (collaboratorsQuery.data) {
+      const mapped: Collaborator[] = collaboratorsQuery.data.map((c: any) => ({
+        id: c.id,
+        firstName: c.first_name,
+        lastName: c.last_name,
+        phone: c.phone ?? "",
+        amount: c.agreed_amount,
+        currency: c.currency,
+      }));
+      setCollaborators(mapped);
+    }
+  }, [collaboratorsQuery.data]);
+
+  if (!campaignId) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.errorText}>Invalid campaign</Text>
+      </View>
+    );
+  }
+
+  if (getQuery.isLoading) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.detailText}>Loading...</Text>
+      </View>
+    );
+  }
+
+  if (getQuery.error || !dbCampaign) {
     return (
       <View style={styles.container}>
         <Text style={styles.errorText}>Campaign not found</Text>
@@ -94,10 +136,9 @@ export default function CampaignDetailsPage() {
     }
 
     try {
-      console.log("[handleAddCollaborator] Starting to add collaborator for campaign:", campaign.id);
-      
+      console.log("[handleAddCollaborator] Starting to add collaborator for campaign:", campaignId);
       const result = await createCollaboratorMutation.mutateAsync({
-        campaign_id: campaign.id,
+        campaign_id: campaignId,
         first_name: formData.firstName,
         last_name: formData.lastName,
         phone: formData.phone,
@@ -119,11 +160,10 @@ export default function CampaignDetailsPage() {
 
       const updatedCollaborators = [...collaborators, newCollaborator];
       setCollaborators(updatedCollaborators);
-      updateCampaign(campaign.id, { collaborators: updatedCollaborators });
+      updateCampaign(campaignId, { collaborators: updatedCollaborators });
 
       setFormData({ firstName: "", lastName: "", phone: "", amount: "", currency: "EUR" });
       setShowAddModal(false);
-      
       await collaboratorsQuery.refetch();
     } catch (error: any) {
       console.error("[handleAddCollaborator] Failed to add collaborator:", error);
@@ -163,12 +203,11 @@ export default function CampaignDetailsPage() {
       );
 
       setCollaborators(updatedCollaborators);
-      updateCampaign(campaign.id, { collaborators: updatedCollaborators });
+      updateCampaign(campaignId, { collaborators: updatedCollaborators });
 
       setFormData({ firstName: "", lastName: "", phone: "", amount: "", currency: "EUR" });
       setEditingId(null);
       setShowAddModal(false);
-      
       await collaboratorsQuery.refetch();
     } catch (error) {
       console.error("Failed to update collaborator:", error);
@@ -178,14 +217,12 @@ export default function CampaignDetailsPage() {
 
   const deleteCollaboratorMutation = trpc.collaborators.delete.useMutation();
 
-  const handleDeleteCollaborator = async (id: string) => {
+  const handleDeleteCollaborator = async (idToDelete: string) => {
     try {
-      await deleteCollaboratorMutation.mutateAsync({ id });
-      
-      const updatedCollaborators = collaborators.filter((c) => c.id !== id);
+      await deleteCollaboratorMutation.mutateAsync({ id: idToDelete });
+      const updatedCollaborators = collaborators.filter((c) => c.id !== idToDelete);
       setCollaborators(updatedCollaborators);
-      updateCampaign(campaign.id, { collaborators: updatedCollaborators });
-      
+      updateCampaign(campaignId, { collaborators: updatedCollaborators });
       await collaboratorsQuery.refetch();
     } catch (error) {
       console.error("Failed to delete collaborator:", error);
@@ -224,8 +261,8 @@ export default function CampaignDetailsPage() {
           style: "destructive",
           onPress: async () => {
             try {
-              await deleteMutation.mutateAsync({ id: campaign.id });
-              await deleteCampaign(campaign.id);
+              await deleteMutation.mutateAsync({ id: campaignId });
+              await deleteCampaign(campaignId);
               router.back();
             } catch (error) {
               console.error("Failed to delete campaign:", error);
@@ -241,7 +278,7 @@ export default function CampaignDetailsPage() {
     <>
       <Stack.Screen
         options={{
-          title: campaign.name,
+          title: dbCampaign.name,
           headerShown: true,
           headerBackVisible: true,
         }}
@@ -249,31 +286,24 @@ export default function CampaignDetailsPage() {
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t("campaign.campaignName")}</Text>
-          <Text style={styles.campaignName}>{campaign.name}</Text>
+          <Text style={styles.campaignName}>{dbCampaign.name}</Text>
         </View>
 
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
             <Text style={styles.statLabel}>{t("campaign.budget")}</Text>
-            <Text style={styles.statValue}>{getCurrencySymbol(campaign.currency || "USD")} {campaign.budget.toLocaleString()}</Text>
+            <Text style={styles.statValue}>{getCurrencySymbol(dbCampaign.revenue_currency || "EUR")} {(dbCampaign.revenue_amount ?? 0).toLocaleString()}</Text>
           </View>
           <View style={styles.statCard}>
             <Text style={styles.statLabel}>{t("dashboard.totalSpent")}</Text>
-            <Text style={styles.statValue}>{getCurrencySymbol(campaign.currency || "USD")} {totalSpent.toLocaleString()}</Text>
+            <Text style={styles.statValue}>{getCurrencySymbol(dbCampaign.revenue_currency || "EUR")} {totalSpent.toLocaleString()}</Text>
           </View>
         </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t("campaign.startDate")}</Text>
-          <Text style={styles.detailText}>{campaign.startDate}</Text>
+          <Text style={styles.detailText}>{dbCampaign.start_date || ""}</Text>
         </View>
-
-        {userType === "influencer" && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Nom de la marque</Text>
-            <Text style={styles.detailText}>{campaign.brandName}</Text>
-          </View>
-        )}
 
         {userType === "brand" && (
         <View style={styles.section}>
@@ -324,7 +354,7 @@ export default function CampaignDetailsPage() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t("campaign.description")}</Text>
-          <Text style={styles.detailText}>{campaign.description}</Text>
+          <Text style={styles.detailText}>{dbCampaign.description}</Text>
         </View>
 
         <View style={styles.section}>
@@ -373,7 +403,7 @@ export default function CampaignDetailsPage() {
                   style={styles.saveButton}
                   onPress={() => {
                     const platformNames = editedPlatforms.map((pId) => platformOptions.find((p) => p.id === pId)?.name || pId).join(", ");
-                    updateCampaign(campaign.id, { platforms: editedPlatforms, platform: platformNames });
+                    updateCampaign(campaignId, { platforms: editedPlatforms, platform: platformNames });
                     setIsEditingPlatforms(false);
                     setShowPlatformPicker(false);
                   }}
@@ -383,7 +413,7 @@ export default function CampaignDetailsPage() {
                 <Pressable
                   style={styles.cancelButton}
                   onPress={() => {
-                    setEditedPlatforms(campaign?.platforms || []);
+                    setEditedPlatforms([]);
                     setIsEditingPlatforms(false);
                     setShowPlatformPicker(false);
                   }}
@@ -394,9 +424,7 @@ export default function CampaignDetailsPage() {
             </View>
           ) : (
             <Text style={styles.detailText}>
-              {(campaign.platforms || [])
-                .map((pId) => platformOptions.find((p) => p.id === pId)?.name || pId)
-                .join(", ") || campaign.platform}
+              {(dbCampaign.platforms || []).map((p: any) => p.platform).join(", ")}
             </Text>
           )}
         </View>
@@ -426,7 +454,7 @@ export default function CampaignDetailsPage() {
                 <Pressable
                   style={styles.saveButton}
                   onPress={() => {
-                    updateCampaign(campaign.id, { objectives: editedObjectives });
+                    updateCampaign(campaignId, { objectives: editedObjectives });
                     setIsEditingObjectives(false);
                   }}
                 >
@@ -435,7 +463,7 @@ export default function CampaignDetailsPage() {
                 <Pressable
                   style={styles.cancelButton}
                   onPress={() => {
-                    setEditedObjectives(campaign?.objectives || "");
+                    setEditedObjectives("");
                     setIsEditingObjectives(false);
                   }}
                 >
@@ -444,7 +472,7 @@ export default function CampaignDetailsPage() {
               </View>
             </View>
           ) : (
-            <Text style={styles.detailText}>{campaign.objectives || "N/A"}</Text>
+            <Text style={styles.detailText}>{editedObjectives || "N/A"}</Text>
           )}
         </View>
 
@@ -473,7 +501,7 @@ export default function CampaignDetailsPage() {
                 <Pressable
                   style={styles.saveButton}
                   onPress={() => {
-                    updateCampaign(campaign.id, { requirements: editedRequirements });
+                    updateCampaign(campaignId, { requirements: editedRequirements });
                     setIsEditingRequirements(false);
                   }}
                 >
@@ -482,7 +510,7 @@ export default function CampaignDetailsPage() {
                 <Pressable
                   style={styles.cancelButton}
                   onPress={() => {
-                    setEditedRequirements(campaign?.requirements || "");
+                    setEditedRequirements("");
                     setIsEditingRequirements(false);
                   }}
                 >
@@ -491,7 +519,7 @@ export default function CampaignDetailsPage() {
               </View>
             </View>
           ) : (
-            <Text style={styles.detailText}>{campaign.requirements || "N/A"}</Text>
+            <Text style={styles.detailText}>{editedRequirements || "N/A"}</Text>
           )}
         </View>
 
@@ -517,7 +545,7 @@ export default function CampaignDetailsPage() {
                 <Pressable
                   style={styles.saveButton}
                   onPress={() => {
-                    updateCampaign(campaign.id, { hashtags: editedHashtags });
+                    updateCampaign(campaignId, { hashtags: editedHashtags });
                     setIsEditingHashtags(false);
                   }}
                 >
@@ -526,7 +554,7 @@ export default function CampaignDetailsPage() {
                 <Pressable
                   style={styles.cancelButton}
                   onPress={() => {
-                    setEditedHashtags(campaign?.hashtags || "");
+                    setEditedHashtags("");
                     setIsEditingHashtags(false);
                   }}
                 >
@@ -535,12 +563,12 @@ export default function CampaignDetailsPage() {
               </View>
             </View>
           ) : (
-            <Text style={styles.hashtagText}>{campaign.hashtags || "N/A"}</Text>
+            <Text style={styles.hashtagText}>{editedHashtags || "N/A"}</Text>
           )}
         </View>
 
         <View style={styles.deleteSection}>
-          <Pressable style={styles.deleteCampaignButton} onPress={handleDeleteCampaign}>
+          <Pressable style={styles.deleteCampaignButton} onPress={handleDeleteCampaign} testID="btn-delete-campaign">
             <Trash2 size={20} color="#FFF" />
             <Text style={styles.deleteCampaignButtonText}>{t("campaign.deleteCampaign")}</Text>
           </Pressable>

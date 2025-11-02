@@ -5,12 +5,12 @@ import {
   Megaphone,
   Plus,
 } from "lucide-react-native";
-import React, { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View, Modal, Image } from "react-native";
+import React, { useMemo } from "react";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useUser } from "@/contexts/UserContext";
 import { useCampaigns } from "@/contexts/CampaignContext";
-import { Campaign, mockInfluencers } from "@/mocks/data";
+import { trpc } from "@/lib/trpc";
 
 const getCurrencySymbol = (currency: string): string => {
   const symbols: { [key: string]: string } = {
@@ -24,40 +24,83 @@ const getCurrencySymbol = (currency: string): string => {
   return symbols[currency] || currency;
 };
 
+type DbCampaign = {
+  id: string;
+  name: string;
+  brand_name: string;
+  revenue_amount: number | null;
+  revenue_currency: string | null;
+  status: "active" | "closed";
+};
+
+type CardCampaign = {
+  id: string;
+  name: string;
+  brandName?: string;
+  budget: number;
+  currency: string;
+  status: string;
+  collaborators?: { amount: number }[];
+};
+
 export default function DashboardPage() {
   const { t } = useLanguage();
   const { userType, brandProfile, influencerProfile } = useUser();
   const router = useRouter();
-  const { getCampaignsByBrand, campaigns } = useCampaigns();
-  const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
+  const { campaigns } = useCampaigns();
 
-  const brandCampaigns = brandProfile ? getCampaignsByBrand(brandProfile.id) : [];
-  const influencerCampaigns = influencerProfile ? campaigns.filter(c => c.userId === influencerProfile.userId && c.status === "active") : [];
-  const userCampaigns = userType === "brand" ? brandCampaigns.slice(0, 3) : influencerCampaigns.slice(0, 3);
-  const activeCampaignsCount = brandCampaigns.filter(c => c.status === "active").length;
+  const campaignsQuery = trpc.campaigns.listActiveByOwner.useQuery(undefined, {
+    enabled: userType === "brand",
+  });
+  const totalsQuery = trpc.counters.getBrandTotals.useQuery(undefined, {
+    enabled: userType === "brand",
+  });
 
-  const getEngagedInfluencers = (campaign: Campaign) => {
-    if (!campaign.engagedInfluencers || campaign.engagedInfluencers.length === 0) {
-      return [];
+  const brandCampaignsFromDB: DbCampaign[] = useMemo(() => (campaignsQuery.data as unknown as DbCampaign[]) ?? [], [campaignsQuery.data]);
+
+  const userCampaigns: CardCampaign[] = useMemo(() => {
+    if (userType === "brand") {
+      return brandCampaignsFromDB.slice(0, 3).map((c): CardCampaign => ({
+        id: c.id,
+        name: c.name,
+        brandName: c.brand_name,
+        budget: (c.revenue_amount ?? 0) as number,
+        currency: (c.revenue_currency ?? "EUR") as string,
+        status: c.status,
+      }));
     }
-    return mockInfluencers.filter(inf => campaign.engagedInfluencers?.includes(inf.id));
-  };
+    const influencerCampaigns = influencerProfile ? campaigns.filter(c => c.userId === influencerProfile.userId && c.status === "active") : [];
+    return influencerCampaigns.slice(0, 3).map((c): CardCampaign => ({
+      id: c.id,
+      name: c.name,
+      brandName: c.brandName,
+      budget: c.budget,
+      currency: c.currency || "EUR",
+      status: c.status,
+      collaborators: c.collaborators,
+    }));
+  }, [userType, brandCampaignsFromDB, influencerProfile, campaigns]);
 
-  const getMainCurrency = () => {
-    if (brandCampaigns.length === 0) return "EUR";
-    return brandCampaigns[0].currency || "EUR";
-  };
+  const activeCampaignsCount = userType === "brand" ? brandCampaignsFromDB.length : (campaigns.filter(c => c.status === "active")).length;
 
-  const totalBudget = brandCampaigns
-    .filter(c => c.status === "active" || c.status === "completed")
-    .reduce((sum, c) => sum + c.budget, 0);
+  const mainCurrency = useMemo(() => {
+    if (userType === "brand" && brandCampaignsFromDB.length > 0) return brandCampaignsFromDB[0].revenue_currency || "EUR";
+    return "EUR";
+  }, [userType, brandCampaignsFromDB]);
 
-  const totalSpent = brandCampaigns
-    .filter(c => c.status === "active")
-    .reduce((sum, c) => {
-      const campaignSpent = (c.collaborators || []).reduce((collabSum, collab) => collabSum + collab.amount, 0);
-      return sum + campaignSpent;
-    }, 0);
+  const totalBudget = useMemo(() => {
+    if (userType === "brand") {
+      return brandCampaignsFromDB.reduce((sum: number, c: DbCampaign) => sum + (c.revenue_amount ?? 0), 0);
+    }
+    return 0;
+  }, [userType, brandCampaignsFromDB]);
+
+  const totalSpent = useMemo(() => {
+    if (userType === "brand") {
+      return totalsQuery.data?.totalSpentActiveCampaigns ?? 0;
+    }
+    return 0;
+  }, [userType, totalsQuery.data]);
 
   const brandStats = {
     activeCampaigns: activeCampaignsCount,
@@ -65,8 +108,9 @@ export default function DashboardPage() {
     totalSpent: totalSpent,
   };
 
-  const influencerProposedCount = influencerCampaigns.length;
-  const influencerTotalEarnings = influencerCampaigns.reduce((sum, c) => sum + c.budget, 0);
+  const influencerCampaignsAll = influencerProfile ? campaigns.filter(c => c.userId === influencerProfile.userId && c.status === "active") : [];
+  const influencerProposedCount = influencerCampaignsAll.length;
+  const influencerTotalEarnings = influencerCampaignsAll.reduce((sum, c) => sum + c.budget, 0);
 
   const influencerStats = {
     proposedCampaigns: influencerProposedCount,
@@ -91,7 +135,7 @@ export default function DashboardPage() {
 
         <View style={[styles.statCard, { backgroundColor: "#FEF3C7" }]}>
           <View style={styles.statIcon}>
-            <Text style={styles.currencyIcon}>{getCurrencySymbol(getMainCurrency())}</Text>
+            <Text style={styles.currencyIcon}>{getCurrencySymbol(mainCurrency)}</Text>
           </View>
           <Text style={styles.statValue}>{brandStats.totalBudget.toLocaleString()}</Text>
           <Text style={styles.statLabel}>{t("dashboard.budget")}</Text>
@@ -99,7 +143,7 @@ export default function DashboardPage() {
 
         <View style={[styles.statCard, { backgroundColor: "#D1FAE5" }]}>
           <View style={styles.statIcon}>
-            <Text style={styles.currencyIcon}>{getCurrencySymbol(getMainCurrency())}</Text>
+            <Text style={styles.currencyIcon}>{getCurrencySymbol(mainCurrency)}</Text>
           </View>
           <Text style={styles.statValue}>{brandStats.totalSpent.toLocaleString()}</Text>
           <Text style={styles.statLabel}>{t("dashboard.totalSpent")}</Text>
@@ -110,6 +154,7 @@ export default function DashboardPage() {
         <Pressable 
           style={styles.createButton}
           onPress={() => router.push("/create-campaign" as any)}
+          testID="btn-create-campaign"
         >
           <Plus size={20} color="#FFF" />
           <Text style={styles.createButtonText}>{t("dashboard.createCampaign")}</Text>
@@ -164,7 +209,7 @@ export default function DashboardPage() {
           <Text style={styles.sectionTitle}>
             {t("dashboard.activeCampaigns")}
           </Text>
-          <Pressable onPress={() => router.push("/all-campaigns" as any)}>
+          <Pressable onPress={() => router.push("/all-campaigns" as any)} testID="btn-view-all">
             <Text style={styles.viewAllText}>{t("dashboard.viewAll")}</Text>
           </Pressable>
         </View>
@@ -176,6 +221,7 @@ export default function DashboardPage() {
                 key={campaign.id} 
                 style={styles.campaignCard}
                 onPress={() => router.push(`/campaign-details?id=${campaign.id}` as any)}
+                testID={`card-campaign-${campaign.id}`}
               >
                 <View style={styles.campaignHeader}>
                   <View style={styles.campaignInfo}>
@@ -183,21 +229,16 @@ export default function DashboardPage() {
                     <Text style={styles.campaignBrand}>
                       {userType === "brand" 
                         ? `${(campaign.collaborators?.length || 0)} ${t("common.engagedInfluencers")}`
-                        : campaign.brandName}
+                        : (campaign as any).brandName}
                     </Text>
                   </View>
-                  <View style={[
-                    styles.statusBadge,
-                    campaign.status === "active" && styles.statusActive,
-                    campaign.status === "completed" && styles.statusCompleted,
-                    campaign.status === "proposed" && styles.statusProposed,
-                  ]}>
-                    <Text style={styles.statusText}>{campaign.status}</Text>
+                  <View style={[styles.statusBadge, styles.statusActive]}>
+                    <Text style={styles.statusText}>active</Text>
                   </View>
                 </View>
                 <View style={styles.campaignDetails}>
                   <View style={styles.campaignDetail}>
-                    <Text style={styles.campaignDetailText}>{getCurrencySymbol(campaign.currency || "USD")}{campaign.budget.toLocaleString()}</Text>
+                    <Text style={styles.campaignDetailText}>{getCurrencySymbol((campaign as any).currency || "EUR")}{campaign.budget.toLocaleString()}</Text>
                   </View>
                 </View>
               </Pressable>
@@ -209,81 +250,6 @@ export default function DashboardPage() {
           </View>
         )}
       </View>
-
-      <Modal
-        visible={selectedCampaign !== null}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setSelectedCampaign(null)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{selectedCampaign?.name}</Text>
-              <Pressable onPress={() => setSelectedCampaign(null)}>
-                <Text style={styles.closeButton}>✕</Text>
-              </Pressable>
-            </View>
-
-            <ScrollView style={styles.modalBody}>
-              <View style={styles.detailSection}>
-                <Text style={styles.detailLabel}>{t("campaign.description")}</Text>
-                <Text style={styles.detailValue}>{selectedCampaign?.description}</Text>
-              </View>
-
-              <View style={styles.detailRow}>
-                <View style={styles.detailSection}>
-                  <Text style={styles.detailLabel}>{t("campaign.budget")}</Text>
-                  <Text style={styles.detailValue}>{getCurrencySymbol(selectedCampaign?.currency || "USD")} {selectedCampaign?.budget.toLocaleString()}</Text>
-                </View>
-                <View style={styles.detailSection}>
-                  <Text style={styles.detailLabel}>{t("campaign.targetPlatform")}</Text>
-                  <Text style={styles.detailValue}>{selectedCampaign?.platform}</Text>
-                </View>
-              </View>
-
-              <View style={styles.detailRow}>
-                <View style={styles.detailSection}>
-                  <Text style={styles.detailLabel}>{t("campaign.startDate")}</Text>
-                  <Text style={styles.detailValue}>{selectedCampaign?.startDate}</Text>
-                </View>
-                {selectedCampaign?.endDate && (
-                  <View style={styles.detailSection}>
-                    <Text style={styles.detailLabel}>{t("campaign.endDate")}</Text>
-                    <Text style={styles.detailValue}>{selectedCampaign.endDate}</Text>
-                  </View>
-                )}
-              </View>
-
-              {selectedCampaign && (
-                <View style={styles.influencersSection}>
-                  <Text style={styles.sectionTitle2}>
-                    {t("common.engagedInfluencers")} ({getEngagedInfluencers(selectedCampaign).length})
-                  </Text>
-                  {getEngagedInfluencers(selectedCampaign).length > 0 ? (
-                    <View style={styles.influencersList}>
-                      {getEngagedInfluencers(selectedCampaign).map((influencer) => (
-                        <View key={influencer.id} style={styles.influencerCard}>
-                          <Image source={{ uri: influencer.avatar }} style={styles.avatar} />
-                          <View style={styles.influencerInfo}>
-                            <Text style={styles.influencerName}>{influencer.fullName}</Text>
-                            <Text style={styles.influencerUsername}>{influencer.username}</Text>
-                            <Text style={styles.influencerStats}>
-                              {(influencer.followers / 1000).toFixed(0)}K followers • {influencer.engagementRate}% engagement
-                            </Text>
-                          </View>
-                        </View>
-                      ))}
-                    </View>
-                  ) : (
-                    <Text style={styles.emptyText}>{t("common.noInfluencers")}</Text>
-                  )}
-                </View>
-              )}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
     </ScrollView>
   );
 }
@@ -428,12 +394,6 @@ const styles = StyleSheet.create({
   statusActive: {
     backgroundColor: "#D1FAE5",
   },
-  statusCompleted: {
-    backgroundColor: "#DBEAFE",
-  },
-  statusProposed: {
-    backgroundColor: "#FEF3C7",
-  },
   statusText: {
     fontSize: 12,
     fontWeight: "600" as const,
@@ -462,110 +422,6 @@ const styles = StyleSheet.create({
   emptyStateText: {
     fontSize: 15,
     color: "#9CA3AF",
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "flex-end",
-  },
-  modalContent: {
-    backgroundColor: "#FFFFFF",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    maxHeight: "85%",
-    paddingTop: 20,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "700" as const,
-    color: "#111827",
-    flex: 1,
-  },
-  closeButton: {
-    fontSize: 24,
-    color: "#6B7280",
-    paddingHorizontal: 8,
-  },
-  modalBody: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-  },
-  detailSection: {
-    marginBottom: 16,
-  },
-  detailRow: {
-    flexDirection: "row",
-    gap: 16,
-  },
-  detailLabel: {
-    fontSize: 12,
-    fontWeight: "600" as const,
-    color: "#6B7280",
-    marginBottom: 4,
-    textTransform: "uppercase" as const,
-  },
-  detailValue: {
-    fontSize: 16,
-    color: "#111827",
-  },
-  influencersSection: {
-    marginTop: 24,
-    marginBottom: 20,
-  },
-  sectionTitle2: {
-    fontSize: 18,
-    fontWeight: "700" as const,
-    color: "#111827",
-    marginBottom: 12,
-  },
-  influencersList: {
-    gap: 12,
-  },
-  influencerCard: {
-    flexDirection: "row",
-    backgroundColor: "#F9FAFB",
-    borderRadius: 12,
-    padding: 12,
-    gap: 12,
-  },
-  avatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-  },
-  influencerInfo: {
-    flex: 1,
-    justifyContent: "center",
-  },
-  influencerName: {
-    fontSize: 16,
-    fontWeight: "600" as const,
-    color: "#111827",
-    marginBottom: 2,
-  },
-  influencerUsername: {
-    fontSize: 14,
-    color: "#6B7280",
-    marginBottom: 4,
-  },
-  influencerStats: {
-    fontSize: 12,
-    color: "#9CA3AF",
-  },
-  emptyText: {
-    fontSize: 14,
-    color: "#9CA3AF",
-    textAlign: "center",
-    paddingVertical: 20,
   },
   currencyIcon: {
     fontSize: 20,

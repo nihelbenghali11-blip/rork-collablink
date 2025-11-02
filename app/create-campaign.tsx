@@ -20,6 +20,7 @@ export default function CreateCampaignPage() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { brandProfile } = useUser();
+  const utils = trpc.useUtils();
 
   const [campaignName, setCampaignName] = useState<string>("");
   const [description, setDescription] = useState<string>("");
@@ -88,21 +89,26 @@ export default function CreateCampaignPage() {
       });
 
       console.log("[CreateCampaign] Campaign created successfully with ID:", result.id);
-      
+
+      await Promise.all([
+        utils.campaigns.listActiveByOwner.invalidate(),
+        utils.counters.getBrandTotals.invalidate(),
+      ]);
+
       Alert.alert(
         t("common.success"),
         "Campaign created successfully!",
         [
           {
             text: "OK",
-            onPress: () => router.push(`/campaign-details?id=${result.id}`)
-          }
+            onPress: () => router.replace("/(tabs)/dashboard" as any),
+          },
         ]
       );
     } catch (error) {
       console.error("[CreateCampaign] Failed to create campaign:", error);
       Alert.alert(
-        t("common.error"), 
+        t("common.error"),
         `Failed to create campaign: ${error instanceof Error ? error.message : 'Unknown error'}`
       );
     }
@@ -131,6 +137,7 @@ export default function CreateCampaignPage() {
             placeholderTextColor="#9CA3AF"
             value={campaignName}
             onChangeText={setCampaignName}
+            testID="input-campaign-name"
           />
         </View>
 
@@ -145,6 +152,7 @@ export default function CreateCampaignPage() {
             multiline
             numberOfLines={4}
             textAlignVertical="top"
+            testID="input-description"
           />
         </View>
 
@@ -153,6 +161,7 @@ export default function CreateCampaignPage() {
           <Pressable
             style={styles.input}
             onPress={() => setShowPlatformPicker(!showPlatformPicker)}
+            testID="picker-platform"
           >
             <Text style={platforms.length > 0 ? styles.inputText : styles.placeholderText}>
               {platforms.length > 0
@@ -174,6 +183,7 @@ export default function CreateCampaignPage() {
                       setPlatforms([...platforms, p.id]);
                     }
                   }}
+                  testID={`option-platform-${p.id}`}
                 >
                   <Text style={styles.pickerText}>{p.name}</Text>
                   {platforms.includes(p.id) && <Check size={20} color="#6366F1" />}
@@ -193,10 +203,12 @@ export default function CreateCampaignPage() {
               value={budget}
               onChangeText={setBudget}
               keyboardType="numeric"
+              testID="input-budget"
             />
             <Pressable
               style={styles.currencyButton}
               onPress={() => setShowCurrencyPicker(!showCurrencyPicker)}
+              testID="picker-currency"
             >
               <Text style={styles.currencyText}>{currency}</Text>
             </Pressable>
@@ -212,6 +224,7 @@ export default function CreateCampaignPage() {
                     setCurrency(curr);
                     setShowCurrencyPicker(false);
                   }}
+                  testID={`option-currency-${curr}`}
                 >
                   <Text style={styles.pickerText}>{curr}</Text>
                   {currency === curr && <Check size={20} color="#6366F1" />}
@@ -232,6 +245,7 @@ export default function CreateCampaignPage() {
             multiline
             numberOfLines={3}
             textAlignVertical="top"
+            testID="input-objectives"
           />
         </View>
 
@@ -246,6 +260,7 @@ export default function CreateCampaignPage() {
             multiline
             numberOfLines={3}
             textAlignVertical="top"
+            testID="input-requirements"
           />
         </View>
 
@@ -257,6 +272,7 @@ export default function CreateCampaignPage() {
             placeholderTextColor="#9CA3AF"
             value={hashtags}
             onChangeText={setHashtags}
+            testID="input-hashtags"
           />
         </View>
 
@@ -264,6 +280,7 @@ export default function CreateCampaignPage() {
           <Pressable
             style={[styles.button, styles.primaryButton]}
             onPress={handleSubmit}
+            testID="btn-submit-campaign"
           >
             <Text style={styles.primaryButtonText}>
               {t("campaign.submitCampaign")}
@@ -273,6 +290,7 @@ export default function CreateCampaignPage() {
           <Pressable
             style={[styles.button, styles.secondaryButton]}
             onPress={() => router.back()}
+            testID="btn-cancel"
           >
             <Text style={styles.secondaryButtonText}>
               {t("common.cancel")}
