@@ -10,10 +10,7 @@ export const trpc = createTRPCReact<AppRouter>();
 // Hardcode backend base URL so Expo web and physical device both hit the same backend.
 // For local dev without ngrok you would replace with your machine IP on LAN.
 export const getBaseUrl = () => {
-  const envUrl = process.env.EXPO_PUBLIC_RORK_API_BASE_URL;
-  if (envUrl && typeof envUrl === "string" && envUrl.trim().length > 0) {
-    return envUrl.replace(/\/$/, "");
-  }
+  
   return "https://towanda-proauthor-carlos.ngrok-free.dev";
 };
 
