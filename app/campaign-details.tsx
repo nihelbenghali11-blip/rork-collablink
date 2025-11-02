@@ -101,30 +101,6 @@ export default function CampaignDetailsPage() {
     }
   }, [collaboratorsQuery.data]);
 
-  if (!campaignId) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.errorText}>Invalid campaign</Text>
-      </View>
-    );
-  }
-
-  if (getQuery.isLoading) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.detailText}>Loading...</Text>
-      </View>
-    );
-  }
-
-  if (getQuery.error || !dbCampaign) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.errorText}>Campaign not found</Text>
-      </View>
-    );
-  }
-
   const totalSpent = collaborators.reduce((sum, c) => sum + c.amount, 0);
 
   const createCollaboratorMutation = trpc.collaborators.create.useMutation();
@@ -249,6 +225,30 @@ export default function CampaignDetailsPage() {
   };
 
   const deleteMutation = trpc.campaigns.delete.useMutation();
+
+  if (!campaignId) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.errorText}>Invalid campaign</Text>
+      </View>
+    );
+  }
+
+  if (getQuery.isLoading) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.detailText}>Loading...</Text>
+      </View>
+    );
+  }
+
+  if (getQuery.error || !dbCampaign) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.errorText}>Campaign not found</Text>
+      </View>
+    );
+  }
 
   const handleDeleteCampaign = () => {
     Alert.alert(
