@@ -59,6 +59,42 @@ export default function ProfilePage() {
 
   const setAvatarMutation = trpc.users.setAvatarBlob.useMutation();
 
+  const uriToBase64 = async (uri: string): Promise<string> => {
+    try {
+      if (Platform.OS === 'web') {
+        const res = await fetch(uri);
+        const blob = await res.blob();
+        const arrayBuffer = await blob.arrayBuffer();
+        const bytes = new Uint8Array(arrayBuffer);
+        let binary = '';
+        const chunkSize = 0x8000;
+        for (let i = 0; i < bytes.length; i += chunkSize) {
+          const chunk = bytes.subarray(i, i + chunkSize);
+          binary += String.fromCharCode.apply(null, Array.from(chunk));
+        }
+        return btoa(binary);
+      }
+      const base64 = await FileSystem.readAsStringAsync(uri, { encoding: 'base64' as any });
+      return base64;
+    } catch (e) {
+      console.log('[Profile] uriToBase64 failed', e);
+      throw e;
+    }
+  };
+
+  const guessMime = (uri?: string, provided?: string | null): string => {
+    if (provided) return provided;
+    if (!uri) return 'image/jpeg';
+    const lower = uri.toLowerCase();
+    if (lower.endsWith('.png')) return 'image/png';
+    if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
+    if (lower.startsWith('data:image/')) {
+      const match = lower.match(/^data:(image\/[a-z0-9+.-]+);/);
+      if (match?.[1]) return match[1];
+    }
+    return 'image/jpeg';
+  };
+
   const handlePickInfluencerImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
@@ -76,8 +112,8 @@ export default function ProfilePage() {
     if (!result.canceled && influencerProfile) {
       try {
         const asset = result.assets[0];
-        const base64 = await FileSystem.readAsStringAsync(asset.uri, { encoding: 'base64' as any });
-        const mime = asset.mimeType ?? "image/jpeg";
+        const base64 = await uriToBase64(asset.uri);
+        const mime = guessMime(asset.uri, asset.mimeType);
         await setAvatarMutation.mutateAsync({ base64, mime_type: mime });
         await utils.users.getProfile.invalidate();
         await setInfluencerProfile({
@@ -202,8 +238,8 @@ export default function ProfilePage() {
     if (!result.canceled && brandProfile) {
       try {
         const asset = result.assets[0];
-        const base64 = await FileSystem.readAsStringAsync(asset.uri, { encoding: 'base64' as any });
-        const mime = asset.mimeType ?? "image/jpeg";
+        const base64 = await uriToBase64(asset.uri);
+        const mime = guessMime(asset.uri, asset.mimeType);
         await setAvatarMutation.mutateAsync({ base64, mime_type: mime });
         await utils.users.getProfile.invalidate();
         await setBrandProfile({
