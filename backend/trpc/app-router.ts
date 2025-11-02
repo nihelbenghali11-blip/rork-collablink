@@ -27,6 +27,7 @@ import getBrandTotals from "./routes/counters/getBrandTotals";
 import updateProfile from "./routes/users/updateProfile";
 import registerUser from "./routes/users/register";
 import getProfile from "./routes/users/getProfile";
+import loginUser from "./routes/users/login";
 import searchInfluencers from "./routes/users/searchInfluencers";
 import searchBrands from "./routes/users/searchBrands";
 import getById from "./routes/users/getById";
@@ -73,6 +74,7 @@ export const appRouter = createTRPCRouter({
 
   users: createTRPCRouter({
     register: registerUser,
+    login: loginUser,
     getProfile,
     updateProfile,
     setAvatarBlob,

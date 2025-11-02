@@ -51,6 +51,7 @@ export default function OnboardingPage() {
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
+    password: "",
     companyName: "",
     industry: "",
     username: "",
@@ -131,6 +132,7 @@ export default function OnboardingPage() {
           userType === "influencer"
             ? parseInt(formData.followers || "0", 10) || 0
             : undefined,
+        password: formData.password || undefined,
       };
 
       console.log("[Onboarding] Calling register mutation with:", payload);
@@ -223,12 +225,14 @@ export default function OnboardingPage() {
   // basic validation before enabling button
   const isBrandFormValid =
     !!formData.email &&
+    !!formData.password &&
     !!formData.companyName &&
     !!formData.industry;
 
   const isInfluencerFormValid =
     !!formData.fullName &&
     !!formData.email &&
+    !!formData.password &&
     !!formData.username &&
     !!formData.mainPlatform &&
     !!formData.followers;
@@ -281,6 +285,17 @@ export default function OnboardingPage() {
         </View>
 
         <View style={styles.form}>
+          <View style={{ gap: 12 }}>
+            <Text style={{ textAlign: "center", color: "#6B7280" }}>{t("auth.signUp")}</Text>
+            <View style={{ flexDirection: "row", gap: 12, justifyContent: "center" }}>
+              <Pressable testID="signup-google" style={{ backgroundColor: "#EA4335", paddingVertical: 10, paddingHorizontal: 16, borderRadius: 10 }} onPress={() => console.log("Google signup pressed") }>
+                <Text style={{ color: "#FFFFFF", fontWeight: "700" as const }}>Google</Text>
+              </Pressable>
+              <Pressable testID="signup-apple" style={{ backgroundColor: "#000000", paddingVertical: 10, paddingHorizontal: 16, borderRadius: 10 }} onPress={() => console.log("Apple signup pressed") }>
+                <Text style={{ color: "#FFFFFF", fontWeight: "700" as const }}>Apple</Text>
+              </Pressable>
+            </View>
+          </View>
           {userType === "brand" ? (
             <>
               <View style={styles.inputGroup}>
@@ -334,6 +349,20 @@ export default function OnboardingPage() {
                     })
                   }
                   keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>{t("auth.password")}</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="••••••••"
+                  value={formData.password}
+                  onChangeText={(text) =>
+                    setFormData({ ...formData, password: text })
+                  }
+                  secureTextEntry
                   autoCapitalize="none"
                 />
               </View>
@@ -391,6 +420,20 @@ export default function OnboardingPage() {
                     })
                   }
                   keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>{t("auth.password")}</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="••••••••"
+                  value={formData.password}
+                  onChangeText={(text) =>
+                    setFormData({ ...formData, password: text })
+                  }
+                  secureTextEntry
                   autoCapitalize="none"
                 />
               </View>

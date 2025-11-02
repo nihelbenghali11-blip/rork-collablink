@@ -84,6 +84,7 @@ export default function LandingPage() {
 
           <View style={styles.ctaContainer}>
             <Pressable
+              testID="cta-brand"
               style={[styles.ctaButton, styles.brandButton]}
               onPress={() => handleUserTypeSelection("brand")}
             >
@@ -92,6 +93,7 @@ export default function LandingPage() {
             </Pressable>
 
             <Pressable
+              testID="cta-influencer"
               style={[styles.ctaButton, styles.influencerButton]}
               onPress={() => handleUserTypeSelection("influencer")}
             >
@@ -100,6 +102,36 @@ export default function LandingPage() {
                 {t("landing.influencerCTA")}
               </Text>
             </Pressable>
+
+            <View style={styles.authRow}>
+              <Pressable
+                testID="signin-button"
+                style={styles.linkButton}
+                onPress={() => router.push("/sign-in" as any)}
+              >
+                <Text style={styles.linkText}>{t("auth.signIn")}</Text>
+              </Pressable>
+              <Text style={styles.dot}>•</Text>
+              <Pressable
+                testID="signup-button"
+                style={styles.linkButton}
+                onPress={() => router.push({ pathname: "/onboarding", params: { type: "brand" } } as any)}
+              >
+                <Text style={styles.linkText}>{t("auth.signUp")}</Text>
+              </Pressable>
+            </View>
+
+            <View style={styles.socialContainer}>
+              <Text style={styles.socialTitle}>{t("auth.createAccount")}</Text>
+              <View style={styles.socialRow}>
+                <Pressable testID="google-signin" style={[styles.socialBtn, { backgroundColor: "#EA4335" }]} onPress={() => console.log("Google sign-in pressed") }>
+                  <Text style={styles.socialBtnText}>Google</Text>
+                </Pressable>
+                <Pressable testID="apple-signin" style={[styles.socialBtn, { backgroundColor: "#000000" }]} onPress={() => console.log("Apple sign-in pressed") }>
+                  <Text style={styles.socialBtnText}>Apple</Text>
+                </Pressable>
+              </View>
+            </View>
           </View>
         </View>
 
@@ -244,6 +276,49 @@ const styles = StyleSheet.create({
   ctaContainer: {
     width: "100%",
     gap: 12,
+  },
+  authRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 12,
+  },
+  linkButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  linkText: {
+    color: "#111827",
+    fontWeight: "700" as const,
+    fontSize: 14,
+  },
+  dot: { color: "#9CA3AF" },
+  socialContainer: {
+    marginTop: 8,
+    backgroundColor: "#F9FAFB",
+    padding: 12,
+    borderRadius: 12,
+  },
+  socialTitle: {
+    textAlign: "center",
+    color: "#6B7280",
+    fontSize: 12,
+    marginBottom: 8,
+  },
+  socialRow: {
+    flexDirection: "row",
+    gap: 12,
+    justifyContent: "center",
+  },
+  socialBtn: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+  },
+  socialBtnText: {
+    color: "#FFFFFF",
+    fontWeight: "700" as const,
   },
   ctaButton: {
     flexDirection: "row",
