@@ -159,7 +159,9 @@ export default function SearchPage() {
     >
       <View style={styles.cardContent}>
         <Image
-          source={{ uri: influencer.avatar_url ?? undefined }}
+          source={{ uri: (influencer.avatar_url && influencer.avatar_url.length > 0)
+            ? influencer.avatar_url
+            : `https://ui-avatars.com/api/?name=${encodeURIComponent(influencer.name ?? "User")}&background=E5E7EB&color=111827` }}
           style={styles.avatar}
           contentFit="cover"
         />
@@ -219,7 +221,9 @@ export default function SearchPage() {
     >
       <View style={styles.cardContent}>
         <Image
-          source={{ uri: brand.avatar_url ?? undefined }}
+          source={{ uri: (brand.avatar_url && brand.avatar_url.length > 0)
+            ? brand.avatar_url
+            : `https://ui-avatars.com/api/?name=${encodeURIComponent(brand.name ?? "Brand")}&background=E5E7EB&color=111827` }}
           style={styles.brandLogo}
           contentFit="cover"
         />

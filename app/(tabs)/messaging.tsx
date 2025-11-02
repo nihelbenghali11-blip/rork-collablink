@@ -30,7 +30,9 @@ export default function MessagingPage() {
 
     const displayName = otherUser?.name ?? (otherUser?.id ?? "");
     const fallback = `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=E5E7EB&color=111827`;
-    const avatarUrl = otherUser?.avatar_url || `${getBaseUrl()}/api/users/${otherUser?.id}/avatar` || fallback;
+    const avatarUrl = (otherUser?.avatar_url && otherUser.avatar_url.length > 0)
+      ? otherUser.avatar_url
+      : (otherUser?.id ? `${getBaseUrl()}/api/users/${otherUser.id}/avatar` : fallback);
 
     const lastSeenISO: string | null = otherUser?.updated_at ?? null;
     const isOnline = (() => {
@@ -50,7 +52,7 @@ export default function MessagingPage() {
         testID={`conversation-${item.id}`}
       >
         <View>
-          <Image source={{ uri: avatarUrl }} style={styles.avatar} contentFit="cover" />
+          <Image source={{ uri: avatarUrl }} style={styles.avatar} contentFit="cover" testID={`conversation-avatar-${item.id}`} />
           {isOnline && <View style={styles.onlineDot} />}
         </View>
         <View style={styles.conversationContent}>
