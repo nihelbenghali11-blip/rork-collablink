@@ -14,7 +14,7 @@ import { CheckCircle2, Filter, MapPin, Search as SearchIcon, Users, X } from "lu
 import { useRouter } from "expo-router";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useUser } from "@/contexts/UserContext";
-import { mockInfluencers, mockBrands, Influencer } from "@/mocks/data";
+import { trpc } from "@/lib/trpc";
 
 type PriceIndex = "accessible" | "standard" | "premium" | null;
 type SortOrder = "asc" | "desc" | null;
@@ -32,71 +32,59 @@ export default function SearchPage() {
   const [sortByFollowers, setSortByFollowers] = useState<SortOrder>(null);
   
   const isSearchingInfluencers = userType === "brand";
-  const data = isSearchingInfluencers ? mockInfluencers : mockBrands;
+  const influencersQuery = trpc.users.searchInfluencers.useQuery(
+    { q: searchQuery || undefined, platform: selectedPlatform as any, sortFollowers: sortByFollowers || undefined, limit: 100 },
+    { enabled: isSearchingInfluencers, staleTime: 30000 }
+  );
+
+  const brandsQuery = trpc.users.searchBrands.useQuery(
+    { q: searchQuery || undefined, limit: 100 },
+    { enabled: !isSearchingInfluencers, staleTime: 30000 }
+  );
+
+  type InflItem = {
+    id: string;
+    name: string | null;
+    bio: string | null;
+    avatar_url: string | null;
+    primary_platform: string | null;
+    followers_count: number | null;
+    rating_avg: number | null;
+  };
+
+  type BrandItem = {
+    id: string;
+    name: string | null;
+    bio: string | null;
+    sector: string | null;
+    website: string | null;
+    phone: string | null;
+    address: string | null;
+    avatar_url: string | null;
+    rating_avg: number | null;
+  };
+
+  const data = isSearchingInfluencers
+    ? ((influencersQuery.data?.items ?? []) as unknown as any[])
+    : ((brandsQuery.data?.items ?? []) as unknown as any[]);
 
   const filteredData = useMemo(() => {
-    let result = data.filter((item) => {
-      const searchLower = searchQuery.toLowerCase();
-      if (isSearchingInfluencers) {
-        const influencer = item as Influencer;
-        return (
-          influencer.username.toLowerCase().includes(searchLower) ||
-          influencer.fullName.toLowerCase().includes(searchLower) ||
-          influencer.niche.toLowerCase().includes(searchLower)
-        );
-      } else {
-        const brand = item as typeof mockBrands[0];
-        return (
-          brand.companyName.toLowerCase().includes(searchLower) ||
-          brand.industry.toLowerCase().includes(searchLower)
-        );
-      }
-    });
-
     if (isSearchingInfluencers) {
-      let influencers = result as Influencer[];
-
+      let influencers = (data as InflItem[]);
       if (selectedPlatform) {
-        influencers = influencers.filter(
-          (inf) => inf.mainPlatform === selectedPlatform
-        );
+        influencers = influencers.filter((inf) => (inf.primary_platform ?? "") === selectedPlatform);
       }
-
-      if (selectedPriceIndex) {
-        influencers = influencers.filter(
-          (inf) => inf.priceIndex === selectedPriceIndex
-        );
-      }
-
-      if (selectedCategories.length > 0) {
-        influencers = influencers.filter(
-          (inf) => selectedCategories.includes(inf.category)
-        );
-      }
-
       if (sortByFollowers) {
         influencers = [...influencers].sort((a, b) => {
-          if (sortByFollowers === "asc") {
-            return a.followers - b.followers;
-          } else {
-            return b.followers - a.followers;
-          }
+          const af = a.followers_count ?? 0;
+          const bf = b.followers_count ?? 0;
+          return sortByFollowers === "asc" ? af - bf : bf - af;
         });
       }
-
-      return influencers;
+      return influencers as unknown as any[];
     }
-
-    return result;
-  }, [
-    data,
-    searchQuery,
-    isSearchingInfluencers,
-    selectedPlatform,
-    selectedPriceIndex,
-    selectedCategories,
-    sortByFollowers,
-  ]);
+    return (data as BrandItem[]);
+  }, [data, isSearchingInfluencers, selectedPlatform, sortByFollowers]);
 
   const getPriceIndexDisplay = (priceIndex: string) => {
     switch (priceIndex) {
@@ -149,7 +137,7 @@ export default function SearchPage() {
     sortByFollowers,
   ].filter(Boolean).length;
 
-  const renderInfluencerCard = (influencer: Influencer) => (
+  const renderInfluencerCard = (influencer: InflItem) => (
     <Pressable
       key={influencer.id}
       style={styles.card}
@@ -157,36 +145,34 @@ export default function SearchPage() {
     >
       <View style={styles.cardContent}>
         <Image
-          source={{ uri: influencer.avatar }}
+          source={{ uri: influencer.avatar_url ?? undefined }}
           style={styles.avatar}
           contentFit="cover"
         />
         <View style={styles.cardInfo}>
           <View style={styles.cardHeader}>
-            <Text style={styles.cardName}>{influencer.fullName}</Text>
-            {influencer.verified && (
-              <CheckCircle2 size={16} color="#6366F1" fill="#6366F1" />
-            )}
+            <Text style={styles.cardName}>{influencer.name ?? "Unnamed"}</Text>
+            
           </View>
-          <Text style={styles.cardUsername}>{influencer.username}</Text>
+          <Text style={styles.cardUsername}>{influencer.bio ?? ""}</Text>
           <View style={styles.cardMeta}>
             <View style={styles.metaItem}>
               <Users size={14} color="#6B7280" />
               <Text style={styles.metaText}>
-                {(influencer.followers / 1000).toFixed(0)}K
+                {Math.round((influencer.followers_count ?? 0) / 1000)}K
               </Text>
             </View>
             <View style={styles.metaItem}>
               <MapPin size={14} color="#6B7280" />
-              <Text style={styles.metaText}>{influencer.location}</Text>
+              <Text style={styles.metaText}>{influencer.primary_platform ?? ""}</Text>
             </View>
           </View>
           <View style={styles.tags}>
             <View style={styles.tag}>
-              <Text style={styles.tagText}>{influencer.mainPlatform}</Text>
+              <Text style={styles.tagText}>{influencer.primary_platform ?? ""}</Text>
             </View>
             <View style={styles.tag}>
-              <Text style={styles.tagText}>{influencer.niche}</Text>
+              <Text style={styles.tagText}>{influencer.bio ? influencer.bio.slice(0, 24) : ""}</Text>
             </View>
           </View>
         </View>
@@ -195,30 +181,23 @@ export default function SearchPage() {
         <View
           style={[
             styles.priceIndexBadge,
-            {
-              backgroundColor:
-                influencer.priceIndex === "accessible"
-                  ? "#D1FAE5"
-                  : influencer.priceIndex === "premium"
-                  ? "#FEF3C7"
-                  : "#EEF2FF",
-            },
+            { backgroundColor: "#EEF2FF" },
           ]}
         >
           <Text
             style={[
               styles.priceIndexText,
-              { color: getPriceIndexColor(influencer.priceIndex) },
+              { color: "#6366F1" },
             ]}
           >
-            {getPriceIndexDisplay(influencer.priceIndex)}
+            {influencer.primary_platform ?? ""}
           </Text>
         </View>
       </View>
     </Pressable>
   );
 
-  const renderBrandCard = (brand: typeof mockBrands[0]) => (
+  const renderBrandCard = (brand: BrandItem) => (
     <Pressable 
       key={brand.id} 
       style={styles.card}
@@ -226,25 +205,23 @@ export default function SearchPage() {
     >
       <View style={styles.cardContent}>
         <Image
-          source={{ uri: brand.logo }}
+          source={{ uri: brand.avatar_url ?? undefined }}
           style={styles.brandLogo}
           contentFit="cover"
         />
         <View style={styles.cardInfo}>
           <View style={styles.cardHeader}>
-            <Text style={styles.cardName}>{brand.companyName}</Text>
-            {brand.verified && (
-              <CheckCircle2 size={16} color="#6366F1" fill="#6366F1" />
-            )}
+            <Text style={styles.cardName}>{brand.name ?? "Unnamed"}</Text>
+            
           </View>
-          <Text style={styles.cardUsername}>{brand.industry}</Text>
+          <Text style={styles.cardUsername}>{brand.sector ?? ""}</Text>
           <Text style={styles.brandDescription} numberOfLines={2}>
-            {brand.description}
+            {brand.bio ?? ""}
           </Text>
           <View style={styles.tags}>
             <View style={styles.tag}>
               <Text style={styles.tagText}>
-                {brand.activeCampaigns} active campaigns
+                {brand.sector ?? "Brand"}
               </Text>
             </View>
           </View>
@@ -285,8 +262,8 @@ export default function SearchPage() {
         data={filteredData}
         renderItem={({ item }) =>
           isSearchingInfluencers
-            ? renderInfluencerCard(item as Influencer)
-            : renderBrandCard(item as typeof mockBrands[0])
+            ? renderInfluencerCard(item as InflItem)
+            : renderBrandCard(item as BrandItem)
         }
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}

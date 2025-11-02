@@ -27,6 +27,9 @@ import getBrandTotals from "./routes/counters/getBrandTotals";
 import updateProfile from "./routes/users/updateProfile";
 import registerUser from "./routes/users/register";
 import getProfile from "./routes/users/getProfile";
+import searchInfluencers from "./routes/users/searchInfluencers";
+import searchBrands from "./routes/users/searchBrands";
+import getById from "./routes/users/getById";
 
 export const appRouter = createTRPCRouter({
   example: createTRPCRouter({
@@ -69,6 +72,9 @@ export const appRouter = createTRPCRouter({
     register: registerUser,
     getProfile,
     updateProfile,
+    searchInfluencers,
+    searchBrands,
+    getById,
   }),
 });
 

@@ -4,7 +4,7 @@ import { ArrowLeft, CheckCircle2, Globe, Mail, MapPin, MessageCircle, Phone, Sta
 import React from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { mockBrands } from "@/mocks/data";
+import { trpc } from "@/lib/trpc";
 import { useUser } from "@/contexts/UserContext";
 
 export default function BrandProfilePage() {
@@ -13,7 +13,8 @@ export default function BrandProfilePage() {
   const insets = useSafeAreaInsets();
   const { currentUserId } = useUser();
 
-  const brand = mockBrands.find((b) => b.id === id);
+  const profileQuery = trpc.users.getById.useQuery({ id: id! });
+  const brand = profileQuery.data;
 
   if (!brand) {
     return (
@@ -30,9 +31,9 @@ export default function BrandProfilePage() {
   }
 
   const handleContact = () => {
-    console.log("Opening conversation with brand:", brand.userId);
+    console.log("Openingconversation with brand:", brand.id);
     console.log("Current user ID:", currentUserId);
-    router.push(`/conversation?userId=${brand.userId}&name=${brand.companyName}`);
+    router.push(`/conversation?userId=${brand.id}&name=${encodeURIComponent(brand.name ?? "")}`);
   };
 
   const renderStars = (rating: number) => {
@@ -77,25 +78,23 @@ export default function BrandProfilePage() {
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.profileHeader}>
           <Image
-            source={{ uri: brand.logo }}
+            source={{ uri: brand.avatar_url ?? undefined }}
             style={styles.logo}
             contentFit="cover"
           />
           <View style={styles.profileInfo}>
             <View style={styles.nameRow}>
-              <Text style={styles.brandName}>{brand.companyName}</Text>
-              {brand.verified && (
-                <CheckCircle2 size={24} color="#6366F1" fill="#6366F1" />
-              )}
+              <Text style={styles.brandName}>{brand.name ?? "Unnamed"}</Text>
+              
             </View>
-            <Text style={styles.industry}>{brand.industry}</Text>
+            <Text style={styles.industry}>{brand.sector ?? ""}</Text>
 
-            {brand.rating && (
+            {typeof brand.rating_avg === "number" && (
               <View style={styles.ratingContainer}>
                 <View style={styles.starsRow}>
-                  {renderStars(brand.rating)}
+                  {renderStars(brand.rating_avg ?? 0)}
                 </View>
-                <Text style={styles.ratingText}>{brand.rating.toFixed(1)}</Text>
+                <Text style={styles.ratingText}>{Number(brand.rating_avg ?? 0).toFixed(1)}</Text>
               </View>
             )}
           </View>
@@ -103,7 +102,7 @@ export default function BrandProfilePage() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>À propos</Text>
-          <Text style={styles.description}>{brand.description}</Text>
+          <Text style={styles.description}>{brand.bio ?? ""}</Text>
         </View>
 
         <View style={styles.section}>
@@ -150,8 +149,8 @@ export default function BrandProfilePage() {
               <Mail size={20} color="#6366F1" />
             </View>
             <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Campagnes actives</Text>
-              <Text style={styles.infoValue}>{brand.activeCampaigns} campagnes</Text>
+              <Text style={styles.infoLabel}>Secteur</Text>
+              <Text style={styles.infoValue}>{brand.sector ?? ""}</Text>
             </View>
           </View>
         </View>

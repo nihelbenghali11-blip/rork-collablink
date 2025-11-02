@@ -23,7 +23,7 @@ import {
 } from "react-native";
 import * as DocumentPicker from 'expo-document-picker';
 import { useLanguage } from "@/contexts/LanguageContext";
-import { mockInfluencers } from "@/mocks/data";
+import { trpc } from "@/lib/trpc";
 
 export default function InfluencerProfilePage() {
   const { t, language } = useLanguage();
@@ -33,7 +33,8 @@ export default function InfluencerProfilePage() {
   const [message, setMessage] = useState("");
   const [attachments, setAttachments] = useState<{name: string; uri: string}[]>([]);
 
-  const influencer = mockInfluencers.find((inf) => inf.id === id);
+  const profileQuery = trpc.users.getById.useQuery({ id: id! });
+  const influencer = profileQuery.data;
 
   if (!influencer) {
     return (
@@ -137,13 +138,13 @@ export default function InfluencerProfilePage() {
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
         <View style={styles.coverContainer}>
           <Image
-            source={{ uri: influencer.avatar }}
+            source={{ uri: influencer.avatar_url ?? undefined }}
             style={styles.coverImage}
             contentFit="cover"
           />
           <View style={styles.avatarContainer}>
             <Image
-              source={{ uri: influencer.avatar }}
+              source={{ uri: influencer.avatar_url ?? undefined }}
               style={styles.avatar}
               contentFit="cover"
             />
@@ -152,22 +153,19 @@ export default function InfluencerProfilePage() {
 
         <View style={styles.profileInfo}>
           <View style={styles.nameContainer}>
-            <Text style={styles.fullName}>{influencer.fullName}</Text>
-            {influencer.verified && (
-              <CheckCircle2 size={24} color="#6366F1" fill="#6366F1" />
-            )}
+            <Text style={styles.fullName}>{influencer.name ?? "Unnamed"}</Text>
           </View>
-          <Text style={styles.username}>{influencer.username}</Text>
+          <Text style={styles.username}>{influencer.bio ?? ""}</Text>
 
           <View style={styles.metaRow}>
             <View style={styles.metaItem}>
               <MapPin size={16} color="#6B7280" />
-              <Text style={styles.metaText}>{influencer.location}</Text>
+              <Text style={styles.metaText}>{influencer.primary_platform ?? ""}</Text>
             </View>
             <View style={styles.metaItem}>
               <Users size={16} color="#6B7280" />
               <Text style={styles.metaText}>
-                {(influencer.followers / 1000).toFixed(0)}K {t("search.followers")}
+                {Math.round((influencer.followers_count ?? 0) / 1000)}K {t("search.followers")}
               </Text>
             </View>
           </View>
@@ -175,21 +173,19 @@ export default function InfluencerProfilePage() {
           <View style={styles.statsContainer}>
             <View style={styles.statCard}>
               <View style={styles.starRow}>
-                {renderStars(influencer.collaborationScore)}
+                {renderStars(Number(influencer.rating_avg ?? 0))}
               </View>
-              <Text style={styles.statValue}>({influencer.collaborationScore.toFixed(1)})</Text>
+              <Text style={styles.statValue}>({Number(influencer.rating_avg ?? 0).toFixed(1)})</Text>
               <Text style={styles.statLabel}>{t("profile.collaborationScore")}</Text>
             </View>
             <View style={styles.statCard}>
               <Text style={styles.priceIndexEmoji}>
-                {influencer.priceIndex === "accessible" && "💰"}
-                {influencer.priceIndex === "standard" && "💼"}
-                {influencer.priceIndex === "premium" && "🏆"}
+                {influencer.primary_platform === "Instagram" && "📷"}
+                {influencer.primary_platform === "TikTok" && "🎵"}
+                {influencer.primary_platform === "YouTube" && "▶️"}
               </Text>
               <Text style={styles.statValue}>
-                {influencer.priceIndex === "accessible" && t("search.accessible").replace("💰 ", "")}
-                {influencer.priceIndex === "standard" && t("search.standard").replace("💼 ", "")}
-                {influencer.priceIndex === "premium" && t("search.premium").replace("🏆 ", "")}
+                {influencer.primary_platform ?? ""}
               </Text>
               <Text style={styles.statLabel}>{t("search.priceIndex")}</Text>
             </View>
@@ -197,17 +193,17 @@ export default function InfluencerProfilePage() {
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>{t("profile.about")}</Text>
-            <Text style={styles.bioText}>{influencer.bio}</Text>
+            <Text style={styles.bioText}>{influencer.bio ?? ""}</Text>
           </View>
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>{getPlatformCategoryTitle()}</Text>
             <View style={styles.tags}>
               <View style={styles.tag}>
-                <Text style={styles.tagText}>{influencer.mainPlatform}</Text>
+                <Text style={styles.tagText}>{influencer.primary_platform ?? ""}</Text>
               </View>
               <View style={styles.tag}>
-                <Text style={styles.tagText}>{influencer.category}</Text>
+                {!!influencer.sector && <Text style={styles.tagText}>{influencer.sector}</Text>}
               </View>
             </View>
           </View>
