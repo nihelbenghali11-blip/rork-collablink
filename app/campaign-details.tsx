@@ -31,6 +31,16 @@ const getCurrencySymbol = (currency: string): string => {
   return symbols[currency] || currency;
 };
 
+type FormDataState = {
+  firstName: string;
+  lastName: string;
+  phone: string;
+  amount: string;
+  currency: string;
+};
+
+type PlatformOption = { id: string; name: string };
+
 export default function CampaignDetailsPage() {
   // 1. All hooks. No early returns above this line.
 
@@ -69,29 +79,29 @@ export default function CampaignDetailsPage() {
 
   // local state
   const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
-  const [showAddModal, setShowAddModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState<boolean>(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormDataState>({
     firstName: "",
     lastName: "",
     phone: "",
     amount: "",
     currency: "EUR",
   });
-  const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
+  const [showCurrencyPicker, setShowCurrencyPicker] = useState<boolean>(false);
 
-  const [isEditingPlatforms, setIsEditingPlatforms] = useState(false);
-  const [isEditingObjectives, setIsEditingObjectives] = useState(false);
-  const [isEditingRequirements, setIsEditingRequirements] = useState(false);
-  const [isEditingHashtags, setIsEditingHashtags] = useState(false);
+  const [isEditingPlatforms, setIsEditingPlatforms] = useState<boolean>(false);
+  const [isEditingObjectives, setIsEditingObjectives] = useState<boolean>(false);
+  const [isEditingRequirements, setIsEditingRequirements] = useState<boolean>(false);
+  const [isEditingHashtags, setIsEditingHashtags] = useState<boolean>(false);
 
   const [editedPlatforms, setEditedPlatforms] = useState<string[]>([]);
-  const [editedObjectives, setEditedObjectives] = useState("");
-  const [editedRequirements, setEditedRequirements] = useState("");
-  const [editedHashtags, setEditedHashtags] = useState("");
-  const [showPlatformPicker, setShowPlatformPicker] = useState(false);
+  const [editedObjectives, setEditedObjectives] = useState<string>("");
+  const [editedRequirements, setEditedRequirements] = useState<string>("");
+  const [editedHashtags, setEditedHashtags] = useState<string>("");
+  const [showPlatformPicker, setShowPlatformPicker] = useState<boolean>(false);
 
-  const platformOptions = [
+  const platformOptions: PlatformOption[] = [
     { id: "instagram", name: "Instagram" },
     { id: "tiktok", name: "TikTok" },
     { id: "facebook", name: "Facebook" },
@@ -817,5 +827,306 @@ export default function CampaignDetailsPage() {
 }
 
 const styles = StyleSheet.create({
-  // ... keep your styles unchanged
+  container: {
+    flex: 1,
+    backgroundColor: "#0B1220",
+  },
+  content: {
+    padding: 16,
+    paddingBottom: 40,
+    gap: 16,
+  },
+  section: {
+    backgroundColor: "#0F172A",
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#1F2A44",
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+  sectionTitle: {
+    color: "#E5E7EB",
+    fontSize: 16,
+    fontWeight: "600",
+    letterSpacing: 0.2,
+  },
+  campaignName: {
+    color: "#FFFFFF",
+    fontSize: 20,
+    fontWeight: "700",
+    marginTop: 2,
+  },
+  statsRow: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: "#0F172A",
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: "#1F2A44",
+  },
+  statLabel: {
+    color: "#9CA3AF",
+    fontSize: 12,
+    marginBottom: 6,
+  },
+  statValue: {
+    color: "#F9FAFB",
+    fontSize: 18,
+    fontWeight: "700",
+  },
+  detailText: {
+    color: "#D1D5DB",
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  emptyText: {
+    color: "#9CA3AF",
+    fontSize: 14,
+  },
+  collaboratorsList: {
+    marginTop: 8,
+    gap: 10,
+  },
+  collaboratorCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#0B1325",
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "#1F2A44",
+  },
+  collaboratorInfo: {
+    flex: 1,
+  },
+  collaboratorName: {
+    color: "#F3F4F6",
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  collaboratorDetails: {
+    color: "#9CA3AF",
+    fontSize: 13,
+    marginTop: 2,
+  },
+  collaboratorActions: {
+    flexDirection: "row",
+    gap: 6,
+    marginLeft: 10,
+  },
+  actionButton: {
+    padding: 6,
+    borderRadius: 8,
+    backgroundColor: "#0F172A",
+    borderWidth: 1,
+    borderColor: "#1F2A44",
+  },
+  addButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#3B82F6",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+  },
+  addButtonText: {
+    color: "#FFFFFF",
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  input: {
+    backgroundColor: "#0B1325",
+    borderWidth: 1,
+    borderColor: "#1F2A44",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  textArea: {
+    minHeight: 100,
+  },
+  inputText: {
+    color: "#E5E7EB",
+  },
+  placeholderText: {
+    color: "#6B7280",
+  },
+  pickerContainer: {
+    marginTop: 8,
+    backgroundColor: "#0B1325",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#1F2A44",
+  },
+  pickerOption: {
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderBottomWidth: 1,
+    borderBottomColor: "#132038",
+  },
+  pickerText: {
+    color: "#E5E7EB",
+    fontSize: 14,
+  },
+  editActions: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 12,
+  },
+  saveButton: {
+    flex: 1,
+    backgroundColor: "#10B981",
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  saveButtonText: {
+    color: "#FFFFFF",
+    fontWeight: "700",
+  },
+  cancelButton: {
+    flex: 1,
+    backgroundColor: "#1F2937",
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#374151",
+  },
+  cancelButtonText: {
+    color: "#E5E7EB",
+    fontWeight: "600",
+  },
+  hashtagText: {
+    color: "#93C5FD",
+    fontSize: 14,
+  },
+  deleteSection: {
+    marginTop: 8,
+  },
+  deleteCampaignButton: {
+    backgroundColor: "#EF4444",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  deleteCampaignButtonText: {
+    color: "#FFFFFF",
+    fontWeight: "700",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "flex-end",
+  },
+  modalContent: {
+    backgroundColor: "#0B1220",
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    paddingBottom: 20,
+    maxHeight: "85%",
+  },
+  modalHeader: {
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "#1F2A44",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  modalTitle: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  modalBody: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+  },
+  inputGroup: {
+    marginBottom: 12,
+  },
+  inputLabel: {
+    color: "#9CA3AF",
+    marginBottom: 8,
+  },
+  modalInput: {
+    backgroundColor: "#0F172A",
+    borderWidth: 1,
+    borderColor: "#1F2A44",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    color: "#E5E7EB",
+  },
+  amountRow: {
+    flexDirection: "row",
+    gap: 8,
+    alignItems: "center",
+  },
+  amountInput: {
+    flex: 1,
+  },
+  currencyPicker: {
+    backgroundColor: "#111827",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#1F2A44",
+  },
+  currencyText: {
+    color: "#E5E7EB",
+    fontWeight: "600",
+  },
+  currencyList: {
+    marginTop: 8,
+    backgroundColor: "#0B1325",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#1F2A44",
+  },
+  currencyOption: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#132038",
+  },
+  currencyOptionText: {
+    color: "#E5E7EB",
+    fontSize: 14,
+  },
+  submitButton: {
+    marginTop: 4,
+    backgroundColor: "#3B82F6",
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  submitButtonText: {
+    color: "#FFFFFF",
+    fontWeight: "700",
+  },
+  errorText: {
+    color: "#FCA5A5",
+    fontSize: 14,
+  },
 });
