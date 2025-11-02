@@ -26,19 +26,25 @@ export default function SearchPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   
-  const [selectedPlatform, setSelectedPlatform] = useState<string | null>(null);
+  type PlatformType = "Instagram" | "TikTok" | "YouTube" | "Facebook" | "Snapchat" | null;
+  const [selectedPlatform, setSelectedPlatform] = useState<PlatformType>(null);
   const [selectedPriceIndex, setSelectedPriceIndex] = useState<PriceIndex>(null);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [sortByFollowers, setSortByFollowers] = useState<SortOrder>(null);
   
   const isSearchingInfluencers = userType === "brand";
   const influencersQuery = trpc.users.searchInfluencers.useQuery(
-    { q: searchQuery || undefined, platform: selectedPlatform as any, sortFollowers: sortByFollowers || undefined, limit: 100 },
+    {
+      q: (searchQuery?.trim()?.length ?? 0) > 0 ? searchQuery.trim() : undefined,
+      platform: selectedPlatform ?? undefined,
+      sortFollowers: sortByFollowers ?? undefined,
+      limit: 100,
+    },
     { enabled: isSearchingInfluencers, staleTime: 30000 }
   );
 
   const brandsQuery = trpc.users.searchBrands.useQuery(
-    { q: searchQuery || undefined, limit: 100 },
+    { q: (searchQuery?.trim()?.length ?? 0) > 0 ? searchQuery.trim() : undefined, limit: 100 },
     { enabled: !isSearchingInfluencers, staleTime: 30000 }
   );
 
@@ -112,7 +118,7 @@ export default function SearchPage() {
     }
   };
 
-  const platforms = ["Instagram", "TikTok", "YouTube", "Snapchat", "Facebook"];
+  const platforms = ["Instagram", "TikTok", "YouTube", "Snapchat", "Facebook"] as const;
   const priceIndices: ("accessible" | "standard" | "premium")[] = ["accessible", "standard", "premium"];
   const categories = [
     "Fashion & Lifestyle",
