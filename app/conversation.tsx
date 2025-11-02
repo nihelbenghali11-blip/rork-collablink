@@ -18,8 +18,9 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as DocumentPicker from "expo-document-picker";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { useMessaging, MessageAttachment } from "@/contexts/MessagingContext";
-import { mockInfluencers, mockBrands } from "@/mocks/data";
+import { MessageAttachment } from "@/contexts/MessagingContext";
+import { trpc } from "@/lib/trpc";
+import { useUser } from "@/contexts/UserContext";
 
 export default function ConversationPage() {
   const { id, influencerId, userId, name } = useLocalSearchParams<{ 
@@ -32,24 +33,24 @@ export default function ConversationPage() {
   const { t } = useLanguage();
   const flatListRef = useRef<FlatList>(null);
   const insets = useSafeAreaInsets();
-  const { getConversationMessages, addMessage, markAsRead } = useMessaging();
+  const { currentUserId } = useUser();
+  const sendMutation = trpc.messaging.sendMessage.useMutation();
 
   const [inputText, setInputText] = useState<string>("");
   const [selectedAttachments, setSelectedAttachments] = useState<MessageAttachment[]>([]);
   const [isUploading, setIsUploading] = useState<boolean>(false);
 
-  const conversationId = id || `conv_${userId}_${Date.now()}`;
-  const messages = getConversationMessages(conversationId as string);
-  const influencer = influencerId ? mockInfluencers.find((inf) => inf.id === influencerId) : null;
-  const brand = userId ? mockBrands.find((b) => b.userId === userId) : null;
-  const displayName = name || influencer?.fullName || brand?.companyName || "Unknown";
-  const displayAvatar = influencer?.avatar || brand?.logo || "https://via.placeholder.com/150";
+  const conversationId = id as string;
 
-  useEffect(() => {
-    if (conversationId) {
-      markAsRead(conversationId as string);
-    }
-  }, [conversationId]);
+  const messagesQuery = trpc.messaging.listMessages.useQuery(
+    { conversation_id: conversationId },
+    { enabled: !!conversationId }
+  );
+
+  const messages = messagesQuery.data ?? [];
+
+  const displayName = name || userId || "Unknown";
+  const displayAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=E5E7EB&color=111827`;
 
   useEffect(() => {
     if (flatListRef.current && messages.length > 0) {
@@ -94,12 +95,13 @@ export default function ConversationPage() {
 
     setIsUploading(true);
     try {
-      await addMessage(
-        conversationId as string,
-        inputText.trim(),
-        "user",
-        selectedAttachments.length > 0 ? selectedAttachments : undefined
-      );
+      if (!currentUserId) throw new Error("No user");
+
+      await sendMutation.mutateAsync({
+        conversation_id: conversationId,
+        content: inputText.trim(),
+      });
+      await messagesQuery.refetch();
 
       setInputText("");
       setSelectedAttachments([]);
@@ -154,8 +156,8 @@ export default function ConversationPage() {
   };
 
   const renderMessage = ({ item }: { item: any }) => {
-    const isUser = item.sender === "user";
-    
+    const isUser = currentUserId && item.sender_id === currentUserId;
+
     return (
       <View
         style={[
@@ -169,29 +171,37 @@ export default function ConversationPage() {
             isUser ? styles.userBubble : styles.influencerBubble,
           ]}
         >
-          {item.attachments && item.attachments.length > 0 && (
+          {item.attachment && (
             <View style={styles.attachmentsContainer}>
-              {item.attachments.map((att: MessageAttachment) => 
-                renderAttachment(att, true)
+              {renderAttachment(
+                {
+                  id: item.attachment.id,
+                  type: item.attachment.mime_type.startsWith("image/") ? "image" : "document",
+                  uri: item.attachment.storage_url,
+                  name: item.attachment.file_name,
+                  mimeType: item.attachment.mime_type,
+                  size: item.attachment.size,
+                },
+                true
               )}
             </View>
           )}
-          
-          {item.text && (
+
+          {item.content && (
             <Text style={[styles.messageText, isUser && styles.userMessageText]}>
-              {item.text}
+              {item.content}
             </Text>
           )}
-          
+
           <Text style={[styles.timestamp, isUser && styles.userTimestamp]}>
-            {item.timestamp}
+            {item.created_at ? new Date(item.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : ""}
           </Text>
         </View>
       </View>
     );
   };
 
-  if (!influencer && !brand && !name) {
+  if (!conversationId) {
     return (
       <View style={styles.errorContainer}>
         <Text style={styles.errorText}>Conversation not found</Text>
@@ -236,6 +246,11 @@ export default function ConversationPage() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.messagesList}
           onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+          ListEmptyComponent={() => (
+            <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingTop: 40 }}>
+              <Text style={{ color: "#6B7280" }}>No messages yet</Text>
+            </View>
+          )}
         />
 
         {selectedAttachments.length > 0 && (

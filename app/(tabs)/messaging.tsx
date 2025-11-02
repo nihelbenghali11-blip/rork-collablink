@@ -2,52 +2,48 @@ import { Stack, useRouter } from "expo-router";
 import { Image } from "expo-image";
 import { MessageCircle } from "lucide-react-native";
 import React from "react";
-import {
-  FlatList,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { useMessaging } from "@/contexts/MessagingContext";
-import { mockInfluencers } from "@/mocks/data";
+import { trpc } from "@/lib/trpc";
+import { useUser } from "@/contexts/UserContext";
 
 export default function MessagingPage() {
   const { t } = useLanguage();
   const router = useRouter();
-  const { conversations } = useMessaging();
+  const { currentUserId } = useUser();
+
+  const convQuery = trpc.messaging.listConversations.useQuery(undefined, {
+    enabled: !!currentUserId,
+  });
+
+  const conversations = convQuery.data ?? [];
 
   const renderConversation = ({ item }: { item: any }) => {
-    const influencer = mockInfluencers.find((inf) => inf.id === item.influencerId);
-    
-    if (!influencer) return null;
+    const otherUserId = currentUserId ? (item.user_a_id === currentUserId ? item.user_b_id : item.user_a_id) : "";
+
+    const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(otherUserId)}&background=E5E7EB&color=111827`;
 
     return (
       <Pressable
-        style={[styles.conversationCard, item.unread && styles.unreadCard]}
+        style={[styles.conversationCard, ((item.user_a_id === currentUserId ? item.unread_a : item.unread_b) ?? 0) > 0 && styles.unreadCard]}
         onPress={() => {
-          router.push(`/conversation?id=${item.id}&influencerId=${item.influencerId}` as any);
+          router.push(`/conversation?id=${item.id}&userId=${otherUserId}&name=${otherUserId}` as any);
         }}
+        testID={`conversation-${item.id}`}
       >
-        <Image
-          source={{ uri: influencer.avatar }}
-          style={styles.avatar}
-          contentFit="cover"
-        />
+        <Image source={{ uri: avatarUrl }} style={styles.avatar} contentFit="cover" />
         <View style={styles.conversationContent}>
           <View style={styles.conversationHeader}>
-            <Text style={styles.influencerName}>{influencer.fullName}</Text>
-            <Text style={styles.timestamp}>{item.timestamp}</Text>
+            <Text style={styles.influencerName} numberOfLines={1}>{otherUserId}</Text>
+            <Text style={styles.timestamp}>
+              {item.updated_at ? new Date(item.updated_at).toLocaleString() : ""}
+            </Text>
           </View>
           <View style={styles.messagePreview}>
-            <Text
-              style={[styles.lastMessage, item.unread && styles.unreadMessage]}
-              numberOfLines={2}
-            >
-              {item.lastMessage}
+            <Text style={styles.lastMessage} numberOfLines={1}>
+              Conversation
             </Text>
-            {item.unread && <View style={styles.unreadBadge} />}
+            {(((item.user_a_id === currentUserId ? item.unread_a : item.unread_b) ?? 0) > 0) && <View style={styles.unreadBadge} />}
           </View>
         </View>
       </Pressable>
@@ -63,15 +59,11 @@ export default function MessagingPage() {
         }}
       />
       <View style={styles.container}>
-        {conversations.length === 0 ? (
+        {(conversations.length === 0) ? (
           <View style={styles.emptyState}>
             <MessageCircle size={64} color="#D1D5DB" />
-            <Text style={styles.emptyStateTitle}>
-              {t("messaging.noConversations")}
-            </Text>
-            <Text style={styles.emptyStateText}>
-              {t("messaging.startConversation")}
-            </Text>
+            <Text style={styles.emptyStateTitle}>{t("messaging.noConversations")}</Text>
+            <Text style={styles.emptyStateText}>{t("messaging.startConversation")}</Text>
           </View>
         ) : (
           <FlatList

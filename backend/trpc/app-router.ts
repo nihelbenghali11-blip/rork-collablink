@@ -17,6 +17,7 @@ import collaboratorsLegacyRouter from "./routes/collaborators/router";
 import listConversations from "./routes/messaging/listConversations";
 import openConversation from "./routes/messaging/openConversation";
 import sendMessage from "./routes/messaging/sendMessage";
+import listMessages from "./routes/messaging/listMessages";
 
 import ratingCreate from "./routes/ratings/create";
 
@@ -52,6 +53,7 @@ export const appRouter = createTRPCRouter({
     listConversations,
     openConversation,
     sendMessage,
+    listMessages,
   }),
 
   ratings: createTRPCRouter({
