@@ -1,5 +1,6 @@
 import { Stack, useRouter } from "expo-router";
 import { Image } from "expo-image";
+import Avatar from "@/components/Avatar";
 import { MessageCircle } from "lucide-react-native";
 import React, { useEffect, useMemo } from "react";
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
@@ -53,7 +54,15 @@ export default function MessagingPage() {
         testID={`conversation-${item.id}`}
       >
         <View>
-          <Image source={{ uri: avatarUrl }} style={styles.avatar} contentFit="cover" testID={`conversation-avatar-${item.id}`} />
+          <Avatar
+            userId={otherUser?.id}
+            uri={otherUser?.avatar_url}
+            name={displayName}
+            size={56}
+            rounded
+            preferBlob={preferBlob}
+            testID={`conversation-avatar-${item.id}`}
+          />
           {isOnline && <View style={styles.onlineDot} />}
         </View>
         <View style={styles.conversationContent}>

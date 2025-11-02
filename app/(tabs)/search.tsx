@@ -1,4 +1,5 @@
 import { Image } from "expo-image";
+import Avatar from "@/components/Avatar";
 import React, { useState, useMemo } from "react";
 import {
   FlatList,
@@ -158,12 +159,13 @@ export default function SearchPage() {
       onPress={() => router.push(`/influencer-profile?id=${influencer.id}`)}
     >
       <View style={styles.cardContent}>
-        <Image
-          source={{ uri: (influencer.avatar_url && influencer.avatar_url.length > 0)
-            ? influencer.avatar_url
-            : `https://ui-avatars.com/api/?name=${encodeURIComponent(influencer.name ?? "User")}&background=E5E7EB&color=111827` }}
-          style={styles.avatar}
-          contentFit="cover"
+        <Avatar
+          userId={influencer.id}
+          uri={influencer.avatar_url}
+          name={influencer.name ?? "User"}
+          size={80}
+          rounded={false}
+          testID={`influencer-avatar-${influencer.id}`}
         />
         <View style={styles.cardInfo}>
           <View style={styles.cardHeader}>
@@ -220,12 +222,13 @@ export default function SearchPage() {
       onPress={() => router.push(`/brand-profile?id=${brand.id}`)}
     >
       <View style={styles.cardContent}>
-        <Image
-          source={{ uri: (brand.avatar_url && brand.avatar_url.length > 0)
-            ? brand.avatar_url
-            : `https://ui-avatars.com/api/?name=${encodeURIComponent(brand.name ?? "Brand")}&background=E5E7EB&color=111827` }}
-          style={styles.brandLogo}
-          contentFit="cover"
+        <Avatar
+          userId={brand.id}
+          uri={brand.avatar_url}
+          name={brand.name ?? "Brand"}
+          size={80}
+          rounded={false}
+          testID={`brand-avatar-${brand.id}`}
         />
         <View style={styles.cardInfo}>
           <View style={styles.cardHeader}>

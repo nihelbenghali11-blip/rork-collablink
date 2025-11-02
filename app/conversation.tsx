@@ -1,5 +1,6 @@
 import { useLocalSearchParams, useRouter, Stack } from "expo-router";
 import { Image } from "expo-image";
+import Avatar from "@/components/Avatar";
 import { ArrowLeft } from "lucide-react-native";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
@@ -106,7 +107,7 @@ export default function ConversationPage() {
             <ArrowLeft size={24} color="#111827" />
           </Pressable>
           <View style={styles.headerContent}>
-            <Image source={{ uri: displayAvatar }} style={styles.headerAvatar} contentFit="cover" />
+            <Avatar userId={otherId} uri={otherProfile.data?.avatar_url as string | undefined} name={String(displayName)} size={36} rounded testID={`conversation-header-avatar-${otherId}`} />
             <Text style={styles.headerName}>{displayName}</Text>
           </View>
           <View style={{ width: 40 }} />
