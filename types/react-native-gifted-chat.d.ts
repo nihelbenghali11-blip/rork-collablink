@@ -26,6 +26,8 @@ declare module 'react-native-gifted-chat' {
     scrollToBottom?: boolean;
     showUserAvatar?: boolean;
     isTyping?: boolean;
+    placeholder?: string;
+    textInputProps?: any;
   }
 
   export class Bubble extends React.Component<any> {}

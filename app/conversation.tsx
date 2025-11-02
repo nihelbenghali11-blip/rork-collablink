@@ -1,8 +1,7 @@
 import { useLocalSearchParams, useRouter, Stack } from "expo-router";
-import { Image } from "expo-image";
 import Avatar from "@/components/Avatar";
-import { ArrowLeft } from "lucide-react-native";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { ArrowLeft, Send as SendIcon } from "lucide-react-native";
+import React, { useCallback, useEffect, useMemo } from "react";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -48,13 +47,13 @@ export default function ConversationPage() {
     if (conversationId) {
       markRead.mutate({ conversation_id: conversationId });
     }
-  }, [conversationId]);
+  }, [conversationId, markRead]);
 
   useEffect(() => {
     if (conversationId) {
       markRead.mutate({ conversation_id: conversationId });
     }
-  }, [messagesQuery.data?.length]);
+  }, [messagesQuery.data?.length, conversationId, markRead]);
 
   const giftedMessages: IMessage[] = useMemo(() => {
     const arr = messagesQuery.data ?? [];
@@ -88,7 +87,7 @@ export default function ConversationPage() {
     } catch (e) {
       console.log('[Conversation] send failed', e);
     }
-  }, [conversationId]);
+  }, [conversationId, messagesQuery, sendMutation]);
 
   if (!conversationId) {
     return (
@@ -122,8 +121,8 @@ export default function ConversationPage() {
             <Bubble
               {...props}
               wrapperStyle={{
-                left: { backgroundColor: "#FFFFFF", borderRadius: 18, borderBottomLeftRadius: 4, borderWidth: 1, borderColor: "#E5E7EB" },
-                right: { backgroundColor: "#6366F1", borderRadius: 18, borderBottomRightRadius: 4 },
+                left: { backgroundColor: "#FFFFFF", borderRadius: 18, borderBottomLeftRadius: 6, borderWidth: 1, borderColor: "#E5E7EB" },
+                right: { backgroundColor: "#4F46E5", borderRadius: 18, borderBottomRightRadius: 6 },
               }}
               textStyle={{ right: { color: "#FFFFFF" }, left: { color: "#374151" } }}
             />
@@ -131,23 +130,32 @@ export default function ConversationPage() {
           renderInputToolbar={(props) => (
             <InputToolbar
               {...props}
-              containerStyle={{ borderTopColor: "#E5E7EB", borderTopWidth: 1, backgroundColor: "#FFFFFF" }}
-              primaryStyle={{ alignItems: "center" }}
+              containerStyle={styles.toolbarContainer}
+              primaryStyle={styles.toolbarInner}
             />
           )}
           renderSend={(props) => (
             <Send
               {...props}
-              containerStyle={{ justifyContent: "center", alignItems: "center", paddingRight: 12 }}
+              containerStyle={styles.sendContainer}
               testID="send-button"
             >
-              <Text style={{ color: "#6366F1", fontWeight: "700" }}>{t("profile.send")}</Text>
+              <View style={styles.sendButton}>
+                <SendIcon color="#FFFFFF" size={18} />
+              </View>
             </Send>
           )}
           timeTextStyle={{ left: { color: "#9CA3AF" }, right: { color: "#E0E7FF" } }}
           alwaysShowSend
           scrollToBottom
           showUserAvatar
+          placeholder={t("messaging.typeMessage")}
+          textInputProps={{
+            style: styles.textInput,
+            placeholderTextColor: "#9CA3AF",
+            testID: "message-input",
+            returnKeyType: "send",
+          } as any}
         />
       </View>
     </>
@@ -172,4 +180,37 @@ const styles = StyleSheet.create({
   headerName: { fontSize: 17, fontWeight: "700" as const, color: "#111827" },
   errorContainer: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#F9FAFB" },
   errorText: { fontSize: 16, color: "#6B7280" },
+  toolbarContainer: {
+    borderTopColor: "#E5E7EB",
+    borderTopWidth: 1,
+    backgroundColor: "#FFFFFF",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  toolbarInner: {
+    alignItems: "center",
+  },
+  textInput: {
+    flex: 1,
+    backgroundColor: "#F3F4F6",
+    borderRadius: 24,
+    paddingHorizontal: 16,
+    paddingVertical: Platform.select({ ios: 12, android: 8, default: 10 }) as number,
+    color: "#111827",
+    fontSize: 16,
+  },
+  sendContainer: {
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 6,
+  },
+  sendButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#4F46E5",
+    justifyContent: "center",
+    alignItems: "center",
+    marginLeft: 8,
+  },
 });
