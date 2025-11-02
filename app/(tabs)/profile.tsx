@@ -23,6 +23,7 @@ import {
 import React, { useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View, ToastAndroid, Share, Platform } from "react-native";
 import { trpc, getBaseUrl } from "@/lib/trpc";
+
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useUser } from "@/contexts/UserContext";
 import { useCampaigns } from "@/contexts/CampaignContext";
@@ -31,6 +32,8 @@ export default function ProfilePage() {
   const { t } = useLanguage();
   const router = useRouter();
   const { userType, brandProfile, influencerProfile, logout, setBrandProfile, setInfluencerProfile } = useUser();
+  const utils = trpc.useUtils();
+  const meQuery = trpc.users.getProfile.useQuery(undefined, { refetchOnWindowFocus: true });
   const { campaigns } = useCampaigns();
   const [isEditingAbout, setIsEditingAbout] = useState(false);
   const [editWebsite, setEditWebsite] = useState(brandProfile?.website || "");
@@ -76,6 +79,7 @@ export default function ProfilePage() {
         const base64 = await FileSystem.readAsStringAsync(asset.uri, { encoding: 'base64' as any });
         const mime = asset.mimeType ?? "image/jpeg";
         await setAvatarMutation.mutateAsync({ base64, mime_type: mime });
+        await utils.users.getProfile.invalidate();
         await setInfluencerProfile({
           ...influencerProfile,
           avatarUrl: `${getBaseUrl()}/api/users/${influencerProfile.userId}/avatar?ts=${Date.now()}`,
@@ -201,6 +205,7 @@ export default function ProfilePage() {
         const base64 = await FileSystem.readAsStringAsync(asset.uri, { encoding: 'base64' as any });
         const mime = asset.mimeType ?? "image/jpeg";
         await setAvatarMutation.mutateAsync({ base64, mime_type: mime });
+        await utils.users.getProfile.invalidate();
         await setBrandProfile({
           ...brandProfile,
           photoUri: `${getBaseUrl()}/api/users/${brandProfile.userId}/avatar?ts=${Date.now()}`,
@@ -264,9 +269,9 @@ export default function ProfilePage() {
       <View style={styles.profileHeader}>
         <View style={styles.avatarContainer}>
           <Pressable onPress={handlePickImage}>
-            {brandProfile?.photoUri ? (
+            { (meQuery.data?.avatar_url || brandProfile?.photoUri) ? (
               <Image
-                source={{ uri: brandProfile.photoUri }}
+                source={{ uri: (meQuery.data?.avatar_url as string) || (brandProfile?.photoUri as string) }}
                 style={styles.profileAvatar}
                 contentFit="cover"
               />
@@ -408,7 +413,11 @@ export default function ProfilePage() {
           <Pressable onPress={handlePickInfluencerImage}>
             <Image
               source={{
-                uri: influencerProfile?.avatarUrl || `${getBaseUrl()}/api/users/${influencerProfile?.userId}/avatar` || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400",
+                uri:
+                  (meQuery.data?.avatar_url as string) ||
+                  (influencerProfile?.avatarUrl as string) ||
+                  (influencerProfile?.userId ? `${getBaseUrl()}/api/users/${influencerProfile.userId}/avatar` : "") ||
+                  "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400",
               }}
               style={styles.profileAvatar}
               contentFit="cover"
