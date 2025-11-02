@@ -32,6 +32,7 @@ export default function InfluencerProfilePage() {
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [message, setMessage] = useState("");
   const [attachments, setAttachments] = useState<{name: string; uri: string}[]>([]);
+  const openConv = trpc.messaging.openConversation.useMutation();
 
   const profileQuery = trpc.users.getById.useQuery({ id: id! });
   const influencer = profileQuery.data;
@@ -211,7 +212,15 @@ export default function InfluencerProfilePage() {
           <View style={styles.actionButtons}>
             <Pressable 
               style={styles.primaryButton}
-              onPress={() => setShowMessageModal(true)}
+              onPress={async () => {
+                try {
+                  const conv = await openConv.mutateAsync({ other_user_id: id! });
+                  router.push(`/conversation?id=${conv.id}&userId=${id}&name=${encodeURIComponent(influencer.name ?? "")}`);
+                } catch (e) {
+                  console.error("Failed to open conversation", e);
+                  setShowMessageModal(true);
+                }
+              }}
             >
               <MessageCircle size={20} color="#FFFFFF" />
               <Text style={styles.primaryButtonText}>{t("profile.message")}</Text>

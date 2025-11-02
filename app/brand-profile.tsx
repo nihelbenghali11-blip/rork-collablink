@@ -30,10 +30,15 @@ export default function BrandProfilePage() {
     );
   }
 
-  const handleContact = () => {
-    console.log("Openingconversation with brand:", brand.id);
-    console.log("Current user ID:", currentUserId);
-    router.push(`/conversation?userId=${brand.id}&name=${encodeURIComponent(brand.name ?? "")}`);
+  const openConv = trpc.messaging.openConversation.useMutation();
+
+  const handleContact = async () => {
+    try {
+      const conv = await openConv.mutateAsync({ other_user_id: brand.id });
+      router.push(`/conversation?id=${conv.id}&userId=${brand.id}&name=${encodeURIComponent(brand.name ?? "")}`);
+    } catch (e) {
+      console.error("Failed to open conversation", e);
+    }
   };
 
   const renderStars = (rating: number) => {

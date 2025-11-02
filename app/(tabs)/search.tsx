@@ -33,19 +33,27 @@ export default function SearchPage() {
   const [sortByFollowers, setSortByFollowers] = useState<SortOrder>(null);
   
   const isSearchingInfluencers = userType === "brand";
+  const influencersInput = useMemo(() => {
+    const q = (searchQuery?.trim()?.length ?? 0) > 0 ? searchQuery.trim() : undefined;
+    const platform = selectedPlatform ?? undefined;
+    const sortFollowersLocal = sortByFollowers ?? undefined;
+    const hasAny = q || platform || sortFollowersLocal;
+    return hasAny ? { q, platform, sortFollowers: sortFollowersLocal, limit: 100 } : undefined;
+  }, [searchQuery, selectedPlatform, sortByFollowers]);
+
   const influencersQuery = trpc.users.searchInfluencers.useQuery(
-    {
-      q: (searchQuery?.trim()?.length ?? 0) > 0 ? searchQuery.trim() : undefined,
-      platform: selectedPlatform ?? undefined,
-      sortFollowers: sortByFollowers ?? undefined,
-      limit: 100,
-    },
-    { enabled: isSearchingInfluencers, staleTime: 30000 }
+    influencersInput,
+    { enabled: userType !== null && isSearchingInfluencers, staleTime: 30000 }
   );
 
+  const brandsInput = useMemo(() => {
+    const q = (searchQuery?.trim()?.length ?? 0) > 0 ? searchQuery.trim() : undefined;
+    return q ? { q, limit: 100 } : undefined;
+  }, [searchQuery]);
+
   const brandsQuery = trpc.users.searchBrands.useQuery(
-    { q: (searchQuery?.trim()?.length ?? 0) > 0 ? searchQuery.trim() : undefined, limit: 100 },
-    { enabled: !isSearchingInfluencers, staleTime: 30000 }
+    brandsInput,
+    { enabled: userType !== null && !isSearchingInfluencers, staleTime: 30000 }
   );
 
   type InflItem = {
@@ -274,6 +282,11 @@ export default function SearchPage() {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
+        ListEmptyComponent={() => (
+          <View style={{ padding: 24 }}>
+            <Text style={{ color: "#6B7280" }}>No results</Text>
+          </View>
+        )}
       />
 
       <Modal
