@@ -67,6 +67,7 @@ export default function DashboardPage() {
         budget: (c.revenue_amount ?? 0) as number,
         currency: (c.revenue_currency ?? "EUR") as string,
         status: c.status,
+        collaborators: Array.from({ length: ((c as any).collaborators?.length ?? 0) }, () => ({ amount: 0 })),
       }));
     }
     const influencerCampaigns = influencerProfile ? campaigns.filter(c => c.userId === influencerProfile.userId && c.status === "active") : [];

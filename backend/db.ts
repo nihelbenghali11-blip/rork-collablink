@@ -148,6 +148,10 @@ export async function listActiveCampaignsByOwner(owner_user_id: string) {
     orderBy: { created_at: "desc" },
     include: {
       platforms: true,
+      collaborators: {
+        where: { deleted_at: null },
+        select: { id: true },
+      },
     },
   });
 }
