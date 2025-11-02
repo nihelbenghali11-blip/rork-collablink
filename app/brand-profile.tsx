@@ -1,11 +1,11 @@
-import { Image } from "expo-image";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import { ArrowLeft, CheckCircle2, Globe, Mail, MapPin, MessageCircle, Phone, Star } from "lucide-react-native";
+import { ArrowLeft, Globe, Mail, MapPin, MessageCircle, Phone, Star } from "lucide-react-native";
 import React from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { trpc, getBaseUrl } from "@/lib/trpc";
+import { trpc } from "@/lib/trpc";
 import { useUser } from "@/contexts/UserContext";
+import Avatar from "@/components/Avatar";
 
 export default function BrandProfilePage() {
   const router = useRouter();
@@ -18,6 +18,7 @@ export default function BrandProfilePage() {
     { enabled: typeof id === 'string' && id.length > 0 }
   );
   const brand = profileQuery.data;
+  const displayName = brand?.name ?? "Unnamed";
 
   if (profileQuery.isLoading) {
     return (
@@ -96,14 +97,18 @@ export default function BrandProfilePage() {
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.profileHeader}>
-          <Image
-            source={{ uri: brand.avatar_url || `${getBaseUrl()}/api/users/${brand.id}/avatar` }}
-            style={styles.logo}
-            contentFit="cover"
+          <Avatar
+            userId={brand.id}
+            uri={brand.avatar_url}
+            name={displayName}
+            size={120}
+            rounded={false}
+            preferBlob
+            testID={`brand-profile-avatar-${brand.id}`}
           />
           <View style={styles.profileInfo}>
             <View style={styles.nameRow}>
-              <Text style={styles.brandName}>{brand.name ?? "Unnamed"}</Text>
+              <Text style={styles.brandName} testID="brand-name">{displayName}</Text>
               
             </View>
             <Text style={styles.industry}>{brand.sector ?? ""}</Text>
