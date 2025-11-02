@@ -2,7 +2,7 @@ import { useLocalSearchParams, useRouter, Stack } from "expo-router";
 import { Image } from "expo-image";
 import { ArrowLeft } from "lucide-react-native";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { trpc, getBaseUrl } from "@/lib/trpc";
@@ -33,7 +33,12 @@ export default function ConversationPage() {
 
   const otherId = userId as string | undefined;
   const displayName = name || userId || "Unknown";
-  const displayAvatar = otherId ? `${getBaseUrl()}/api/users/${otherId}/avatar` : `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=E5E7EB&color=111827`;
+  const displayAvatar = otherId
+    ? `${getBaseUrl()}/api/users/${otherId}/avatar`
+    : `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=E5E7EB&color=111827`;
+  const myAvatar = currentUserId
+    ? `${getBaseUrl()}/api/users/${currentUserId}/avatar`
+    : `https://ui-avatars.com/api/?name=${encodeURIComponent("Me")}&background=E5E7EB&color=111827`;
 
   useEffect(() => {
     if (conversationId) {
@@ -49,8 +54,10 @@ export default function ConversationPage() {
 
   const giftedMessages: IMessage[] = useMemo(() => {
     const arr = messagesQuery.data ?? [];
+    console.log('[Conversation] mapping messages', { count: arr.length });
     return arr.map((m: any) => {
       const isMine = currentUserId === m.sender_id;
+      const avatar = isMine ? myAvatar : displayAvatar;
       return {
         _id: m.id,
         text: m.content || "",
@@ -58,14 +65,14 @@ export default function ConversationPage() {
         user: {
           _id: isMine ? currentUserId || "me" : otherId || "other",
           name: isMine ? undefined : displayName,
-          avatar: isMine ? undefined : displayAvatar,
+          avatar,
         },
-        image: m.attachment && m.attachment.mime_type.startsWith("image/") ? m.attachment.storage_url : undefined,
+        image: m.attachment && m.attachment.mime_type?.startsWith?.("image/") ? m.attachment.storage_url : undefined,
         sent: true,
         received: !!m.read_at,
       } as IMessage;
     }).reverse();
-  }, [messagesQuery.data, currentUserId, otherId, displayName, displayAvatar]);
+  }, [messagesQuery.data, currentUserId, otherId, displayName, displayAvatar, myAvatar]);
 
   const onSend = useCallback(async (msgs: IMessage[]) => {
     const first = msgs[0];
@@ -125,8 +132,12 @@ export default function ConversationPage() {
             />
           )}
           renderSend={(props) => (
-            <Send {...props} containerStyle={{ justifyContent: "center", alignItems: "center", paddingRight: 12 }}>
-              <Text style={{ color: "#6366F1", fontWeight: "700" }}>Send</Text>
+            <Send
+              {...props}
+              containerStyle={{ justifyContent: "center", alignItems: "center", paddingRight: 12 }}
+              testID="send-button"
+            >
+              <Text style={{ color: "#6366F1", fontWeight: "700" }}>{t("profile.send")}</Text>
             </Send>
           )}
           timeTextStyle={{ left: { color: "#9CA3AF" }, right: { color: "#E0E7FF" } }}
