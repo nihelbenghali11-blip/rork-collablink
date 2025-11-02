@@ -285,17 +285,7 @@ export default function OnboardingPage() {
         </View>
 
         <View style={styles.form}>
-          <View style={{ gap: 12 }}>
-            <Text style={{ textAlign: "center", color: "#6B7280" }}>{t("auth.signUp")}</Text>
-            <View style={{ flexDirection: "row", gap: 12, justifyContent: "center" }}>
-              <Pressable testID="signup-google" style={{ backgroundColor: "#EA4335", paddingVertical: 10, paddingHorizontal: 16, borderRadius: 10 }} onPress={() => console.log("Google signup pressed") }>
-                <Text style={{ color: "#FFFFFF", fontWeight: "700" as const }}>Google</Text>
-              </Pressable>
-              <Pressable testID="signup-apple" style={{ backgroundColor: "#000000", paddingVertical: 10, paddingHorizontal: 16, borderRadius: 10 }} onPress={() => console.log("Apple signup pressed") }>
-                <Text style={{ color: "#FFFFFF", fontWeight: "700" as const }}>Apple</Text>
-              </Pressable>
-            </View>
-          </View>
+
           {userType === "brand" ? (
             <>
               <View style={styles.inputGroup}>
