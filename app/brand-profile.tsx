@@ -20,6 +20,8 @@ export default function BrandProfilePage() {
   const brand = profileQuery.data;
   const displayName = brand?.name ?? "Unnamed";
 
+  const openConv = trpc.messaging.openConversation.useMutation();
+
   if (profileQuery.isLoading) {
     return (
       <View style={styles.container}>
@@ -44,8 +46,6 @@ export default function BrandProfilePage() {
       </View>
     );
   }
-
-  const openConv = trpc.messaging.openConversation.useMutation();
 
   const handleContact = async () => {
     try {
