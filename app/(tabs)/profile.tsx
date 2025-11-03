@@ -17,8 +17,10 @@ import {
   Edit2,
   Share2,
   Copy,
+  Check,
   Instagram,
   Facebook,
+  Music2,
 } from "lucide-react-native";
 import React, { useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View, ToastAndroid, Share, Platform } from "react-native";
@@ -52,6 +54,7 @@ export default function ProfilePage() {
   const [editSnapchat, setEditSnapchat] = useState(influencerProfile?.snapchatUrl || "");
   const [editPrimaryPlatform, setEditPrimaryPlatform] = useState<"Instagram" | "TikTok" | "YouTube" | "Facebook" | "Snapchat">(influencerProfile?.primaryPlatform || "Instagram");
   const [editFollowersCount, setEditFollowersCount] = useState(influencerProfile?.followersCount?.toString() || "");
+  const [isLinkCopied, setIsLinkCopied] = useState(false);
 
   const handleLogout = async () => {
     await logout();
@@ -224,7 +227,9 @@ export default function ProfilePage() {
     try {
       const profileUrl = `https://collablink.app/profile/${influencerProfile?.userId || brandProfile?.userId}`;
       await Clipboard.setStringAsync(profileUrl);
+      setIsLinkCopied(true);
       showToast('Lien copié ✓');
+      setTimeout(() => setIsLinkCopied(false), 3000);
     } catch (error) {
       console.error('Error copying profile link:', error);
       Alert.alert('Erreur', 'Impossible de copier le lien');
@@ -503,21 +508,25 @@ export default function ProfilePage() {
       <View style={styles.statsContainer}>
         <View style={styles.statItem}>
           <Text style={styles.statValue}>
-            {((influencerProfile?.followers || 0) / 1000).toFixed(0)}K
+            {influencerProfile?.followersCount 
+              ? (influencerProfile.followersCount >= 1000 
+                  ? `${(influencerProfile.followersCount / 1000).toFixed(1)}K` 
+                  : influencerProfile.followersCount.toString())
+              : '0'}
           </Text>
           <Text style={styles.statLabel}>Followers</Text>
         </View>
         <View style={styles.statDivider} />
         <View style={styles.statItem}>
           <View style={styles.ratingRow}>
-            {renderStars(influencerProfile?.rating || 4.5)}
+            {renderStars(meQuery.data?.rating_avg || 0)}
           </View>
-          <Text style={styles.statValue}>{(influencerProfile?.rating || 4.5).toFixed(1)}</Text>
+          <Text style={styles.statValue}>{(meQuery.data?.rating_avg || 0).toFixed(1)}</Text>
           <Text style={styles.statLabel}>Note</Text>
         </View>
         <View style={styles.statDivider} />
         <View style={styles.statItem}>
-          <Text style={styles.statValue}>12</Text>
+          <Text style={styles.statValue}>{campaigns.filter(c => c.userId === influencerProfile?.userId && c.status === 'active').length}</Text>
           <Text style={styles.statLabel}>Campagnes</Text>
         </View>
       </View>
@@ -690,7 +699,7 @@ export default function ProfilePage() {
                     style={styles.socialIcon}
                     onPress={() => handleOpenSocialLink(influencerProfile.tiktokUrl)}
                   >
-                    <Text style={styles.tiktokIcon}>🎵</Text>
+                    <Music2 size={24} color="#000000" />
                   </Pressable>
                 )}
                 {influencerProfile?.facebookUrl && (
@@ -725,8 +734,14 @@ export default function ProfilePage() {
           <Text style={styles.shareButtonText}>Partager le profil</Text>
         </Pressable>
         <Pressable style={styles.copyLinkButton} onPress={handleCopyProfileLink}>
-          <Copy size={20} color="#6366F1" />
-          <Text style={styles.copyLinkText}>Copier le lien</Text>
+          {isLinkCopied ? (
+            <Check size={20} color="#10B981" />
+          ) : (
+            <Copy size={20} color="#6366F1" />
+          )}
+          <Text style={[styles.copyLinkText, isLinkCopied && { color: '#10B981' }]}>
+            {isLinkCopied ? 'Validé' : 'Copier le lien'}
+          </Text>
         </Pressable>
       </View>
     </>
