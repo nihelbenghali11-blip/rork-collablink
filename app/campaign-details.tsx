@@ -389,16 +389,14 @@ export default function CampaignDetailsPage() {
           <View style={styles.statCard}>
             <Text style={styles.statLabel}>{t("campaign.budget")}</Text>
             <Text style={styles.statValue}>
-              {getCurrencySymbol(dbCampaign.revenue_currency || "EUR")}{" "}
-              {(dbCampaign.revenue_amount ?? 0).toLocaleString()}
+              {getCurrencySymbol(dbCampaign.revenue_currency || "EUR")} {(dbCampaign.revenue_amount ?? 0).toLocaleString()}
             </Text>
           </View>
           {userType === "brand" && (
             <View style={styles.statCard}>
               <Text style={styles.statLabel}>{t("dashboard.totalSpent")}</Text>
               <Text style={styles.statValue}>
-                {getCurrencySymbol(dbCampaign.revenue_currency || "EUR")}{" "}
-                {totalSpent.toLocaleString()}
+                {getCurrencySymbol(dbCampaign.revenue_currency || "EUR")} {totalSpent.toLocaleString()}
               </Text>
             </View>
           )}
@@ -436,8 +434,7 @@ export default function CampaignDetailsPage() {
                         {collaborator.firstName} {collaborator.lastName}
                       </Text>
                       <Text style={styles.collaboratorDetails}>
-                        {collaborator.phone} • {collaborator.amount}{" "}
-                        {collaborator.currency}
+                        {collaborator.phone} • {collaborator.amount} {collaborator.currency}
                       </Text>
                     </View>
                     <View style={styles.collaboratorActions}>
