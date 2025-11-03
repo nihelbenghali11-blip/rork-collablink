@@ -44,6 +44,15 @@ export default function CreateCampaignPage() {
 
   const createMutation = trpc.campaigns.create.useMutation();
 
+  type DbCampaignItem = {
+    id: string;
+    name: string;
+    brand_name: string;
+    revenue_amount: number;
+    revenue_currency: string;
+    status: "active" | "closed";
+  };
+
   const handleSubmit = async () => {
     if (!campaignName.trim()) {
       Alert.alert(t("common.error"), "Please enter a campaign name");
@@ -89,6 +98,23 @@ export default function CreateCampaignPage() {
       });
 
       console.log("[CreateCampaign] Campaign created successfully with ID:", result.id);
+
+      try {
+        await utils.campaigns.listActiveByOwner.setData(undefined, (prev: DbCampaignItem[] | undefined) => {
+          const newItem = {
+            id: result.id,
+            name: campaignName,
+            brand_name: brandProfile.companyName,
+            revenue_amount: parseFloat(budget),
+            revenue_currency: currency,
+            status: "active" as const,
+          };
+          const arr = Array.isArray(prev) ? prev : [];
+          return [newItem, ...arr];
+        });
+      } catch (e) {
+        console.log("[CreateCampaign] Failed to optimistically update cache", e);
+      }
 
       await Promise.all([
         utils.campaigns.listActiveByOwner.invalidate(),
