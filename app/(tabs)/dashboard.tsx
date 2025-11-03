@@ -49,9 +49,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const { campaigns } = useCampaigns();
 
-  const campaignsQuery = trpc.campaigns.listActiveByOwner.useQuery(undefined, {
-    enabled: userType === "brand",
-  });
+  const campaignsQuery = trpc.campaigns.listActiveByOwner.useQuery();
   const totalsQuery = trpc.counters.getBrandTotals.useQuery(undefined, {
     enabled: userType === "brand",
   });
@@ -59,30 +57,19 @@ export default function DashboardPage() {
   const brandCampaignsFromDB: DbCampaign[] = useMemo(() => (campaignsQuery.data as unknown as DbCampaign[]) ?? [], [campaignsQuery.data]);
 
   const userCampaigns: CardCampaign[] = useMemo(() => {
-    if (userType === "brand") {
-      return brandCampaignsFromDB.slice(0, 3).map((c): CardCampaign => ({
-        id: c.id,
-        name: c.name,
-        brandName: c.brand_name,
-        budget: (c.revenue_amount ?? 0) as number,
-        currency: (c.revenue_currency ?? "EUR") as string,
-        status: c.status,
-        collaborators: Array.from({ length: ((c as any).collaborators?.length ?? 0) }, () => ({ amount: 0 })),
-      }));
-    }
-    const influencerCampaigns = influencerProfile ? campaigns.filter(c => c.userId === influencerProfile.userId && c.status === "active") : [];
-    return influencerCampaigns.slice(0, 3).map((c): CardCampaign => ({
+    const source = brandCampaignsFromDB;
+    return source.slice(0, 3).map((c): CardCampaign => ({
       id: c.id,
       name: c.name,
-      brandName: c.brandName,
-      budget: c.budget,
-      currency: c.currency || "EUR",
+      brandName: c.brand_name,
+      budget: (c.revenue_amount ?? 0) as number,
+      currency: (c.revenue_currency ?? "EUR") as string,
       status: c.status,
-      collaborators: c.collaborators,
+      collaborators: Array.from({ length: ((c as any).collaborators?.length ?? 0) }, () => ({ amount: 0 })),
     }));
-  }, [userType, brandCampaignsFromDB, influencerProfile, campaigns]);
+  }, [brandCampaignsFromDB]);
 
-  const activeCampaignsCount = userType === "brand" ? brandCampaignsFromDB.length : (campaigns.filter(c => c.status === "active")).length;
+  const activeCampaignsCount = brandCampaignsFromDB.length;
 
   const mainCurrency = useMemo(() => {
     if (userType === "brand" && brandCampaignsFromDB.length > 0) return brandCampaignsFromDB[0].revenue_currency || "EUR";
@@ -109,9 +96,9 @@ export default function DashboardPage() {
     totalSpent: totalSpent,
   };
 
-  const influencerCampaignsAll = influencerProfile ? campaigns.filter(c => c.userId === influencerProfile.userId && c.status === "active") : [];
+  const influencerCampaignsAll = brandCampaignsFromDB;
   const influencerProposedCount = influencerCampaignsAll.length;
-  const influencerTotalEarnings = influencerCampaignsAll.reduce((sum, c) => sum + c.budget, 0);
+  const influencerTotalEarnings = influencerCampaignsAll.reduce((sum, c: any) => sum + (c.revenue_amount ?? 0), 0);
 
   const influencerStats = {
     proposedCampaigns: influencerProposedCount,
@@ -230,7 +217,7 @@ export default function DashboardPage() {
                     <Text style={styles.campaignBrand}>
                       {userType === "brand" 
                         ? `${(campaign.collaborators?.length || 0)} ${t("common.engagedInfluencers")}`
-                        : (campaign as any).brandName}
+                        : campaign.brandName}
                     </Text>
                   </View>
                   <View style={[styles.statusBadge, styles.statusActive]}>
@@ -239,7 +226,7 @@ export default function DashboardPage() {
                 </View>
                 <View style={styles.campaignDetails}>
                   <View style={styles.campaignDetail}>
-                    <Text style={styles.campaignDetailText}>{getCurrencySymbol((campaign as any).currency || "EUR")}{campaign.budget.toLocaleString()}</Text>
+                    <Text style={styles.campaignDetailText}>{getCurrencySymbol(campaign.currency || "EUR")}{campaign.budget.toLocaleString()}</Text>
                   </View>
                 </View>
               </Pressable>

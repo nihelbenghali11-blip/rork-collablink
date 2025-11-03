@@ -1,5 +1,5 @@
 import { Stack, useRouter } from "expo-router";
-import { Check, X } from "lucide-react-native";
+import { Check } from "lucide-react-native";
 import React, { useState } from "react";
 import {
   Alert,
@@ -11,8 +11,8 @@ import {
   View,
 } from "react-native";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { useCampaigns } from "@/contexts/CampaignContext";
 import { useUser } from "@/contexts/UserContext";
+import { trpc } from "@/lib/trpc";
 
 const CURRENCIES = ["EUR", "USD", "GBP", "TND", "MAD", "AED"];
 
@@ -27,8 +27,8 @@ const platformOptions = [
 export default function CreateInfluencerCampaignPage() {
   const { t } = useLanguage();
   const router = useRouter();
-  const { addCampaign } = useCampaigns();
   const { influencerProfile } = useUser();
+  const createMutation = trpc.campaigns.create.useMutation();
 
   const [formData, setFormData] = useState({
     campaignName: "",
@@ -54,31 +54,31 @@ export default function CreateInfluencerCampaignPage() {
       return;
     }
 
-    if (!influencerProfile) {
+    if (!influencerProfile?.userId) {
       Alert.alert("Erreur", "Profil influenceur introuvable");
       return;
     }
 
     try {
-      await addCampaign({
+      const platformNames = formData.platforms
+        .map((pId) => platformOptions.find((p) => p.id === pId)?.name || pId)
+        .filter(Boolean) as ("Instagram" | "TikTok" | "Facebook" | "Snapchat")[];
+
+      await createMutation.mutateAsync({
         name: formData.campaignName,
-        brandId: influencerProfile.id,
-        brandName: formData.brandName,
-        userId: influencerProfile.userId,
-        status: "active",
-        budget: parseFloat(formData.revenue),
-        currency: formData.currency,
-        startDate: new Date().toISOString().split("T")[0],
+        brand_name: formData.brandName,
         description: formData.description,
-        platform: formData.platforms
-          .map((pId) => platformOptions.find((p) => p.id === pId)?.name || pId)
-          .join(", "),
-        platforms: formData.platforms,
-      });
+        revenue_amount: parseFloat(formData.revenue),
+        revenue_currency: formData.currency,
+        start_date: new Date().toISOString().split("T")[0],
+        status: "active",
+        platforms: platformNames,
+      } as any);
 
       Alert.alert(t("common.success"), "Campagne ajoutée avec succès!");
       router.back();
     } catch (error) {
+      console.error("[CreateInfluencerCampaign] create error", error);
       Alert.alert("Erreur", "Impossible de créer la campagne");
     }
   };
@@ -231,7 +231,7 @@ export default function CreateInfluencerCampaignPage() {
           )}
         </View>
 
-        <Pressable style={styles.submitButton} onPress={handleSubmit}>
+        <Pressable style={styles.submitButton} onPress={handleSubmit} testID="btn-submit-influencer-campaign">
           <Text style={styles.submitButtonText}>Ajouter la campagne</Text>
         </Pressable>
       </ScrollView>

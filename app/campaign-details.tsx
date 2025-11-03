@@ -73,6 +73,7 @@ export default function CampaignDetailsPage() {
   const updateCollaboratorMutation = trpc.collaborators.update.useMutation();
   const deleteCollaboratorMutation = trpc.collaborators.delete.useMutation();
   const deleteMutation = trpc.campaigns.delete.useMutation();
+  const updateMutation = trpc.campaigns.update.useMutation();
 
   // derived data from queries
   const dbCampaign = getQuery.data as any;
@@ -529,14 +530,32 @@ export default function CampaignDetailsPage() {
                           platformOptions.find(
                             (p) => p.id === pId
                           )?.name || pId
-                      )
-                      .join(", ");
-                    updateCampaign(campaignId, {
-                      platforms: editedPlatforms,
-                      platform: platformNames,
-                    });
-                    setIsEditingPlatforms(false);
-                    setShowPlatformPicker(false);
+                      ) as ("Instagram" | "TikTok" | "Facebook" | "Snapchat")[];
+                    (async () => {
+                      try {
+                        await updateMutation.mutateAsync({
+                          id: campaignId,
+                          name: dbCampaign.name,
+                          brand_name: dbCampaign.brand_name ?? dbCampaign.brandName ?? "",
+                          description: dbCampaign.description ?? "",
+                          revenue_amount: Number(dbCampaign.revenue_amount ?? 0),
+                          revenue_currency: dbCampaign.revenue_currency ?? "EUR",
+                          start_date: dbCampaign.start_date ?? null,
+                          status: (dbCampaign.status as "active" | "closed") ?? "active",
+                          platforms: platformNames,
+                        });
+                        updateCampaign(campaignId, {
+                          platforms: editedPlatforms,
+                          platform: platformNames.join(", "),
+                        });
+                        await getQuery.refetch();
+                      } catch (e) {
+                        Alert.alert(t("common.error"), "Échec de la mise à jour des plateformes");
+                      } finally {
+                        setIsEditingPlatforms(false);
+                        setShowPlatformPicker(false);
+                      }
+                    })();
                   }}
                 >
                   <Text style={styles.saveButtonText}>Save</Text>

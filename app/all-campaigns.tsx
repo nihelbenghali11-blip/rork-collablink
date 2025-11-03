@@ -22,9 +22,7 @@ export default function AllCampaignsPage() {
   const { userType } = useUser();
   const router = useRouter();
 
-  const listQuery = trpc.campaigns.listActiveByOwner.useQuery(undefined, {
-    enabled: userType === "brand",
-  });
+  const listQuery = trpc.campaigns.listActiveByOwner.useQuery();
 
   const activeCampaigns = listQuery.data ?? [];
 
