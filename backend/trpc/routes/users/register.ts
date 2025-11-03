@@ -80,6 +80,19 @@ export default publicProcedure
           bio: input.bio ?? null,
           sector: input.sector ?? null,
 
+          // Influencer-specific fields
+          primary_platform: input.primary_platform ?? null,
+          followers_count: input.followers_count ?? null,
+          instagram_url: input.instagram_url ?? null,
+          tiktok_url: input.tiktok_url ?? null,
+          facebook_url: input.facebook_url ?? null,
+          snapchat_url: input.snapchat_url ?? null,
+
+          // Brand-specific fields
+          website: input.website ?? null,
+          phone: input.phone ?? null,
+          address: input.address ?? null,
+
           // timestamps. adjust the field names if your Prisma model uses createdAt / updatedAt instead
           created_at: now,
           updated_at: now,
@@ -91,6 +104,8 @@ export default publicProcedure
           email: true,
           bio: true,
           sector: true,
+          followers_count: true,
+          primary_platform: true,
           created_at: true,
         },
       });

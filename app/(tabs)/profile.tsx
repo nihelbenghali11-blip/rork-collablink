@@ -22,7 +22,7 @@ import {
   Facebook,
   Music2,
 } from "lucide-react-native";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View, ToastAndroid, Share, Platform } from "react-native";
 import { trpc, getBaseUrl } from "@/lib/trpc";
 
@@ -53,8 +53,24 @@ export default function ProfilePage() {
   const [editFacebook, setEditFacebook] = useState(influencerProfile?.facebookUrl || "");
   const [editSnapchat, setEditSnapchat] = useState(influencerProfile?.snapchatUrl || "");
   const [editPrimaryPlatform, setEditPrimaryPlatform] = useState<"Instagram" | "TikTok" | "YouTube" | "Facebook" | "Snapchat">(influencerProfile?.primaryPlatform || "Instagram");
-  const [editFollowersCount, setEditFollowersCount] = useState(influencerProfile?.followersCount?.toString() || "");
+  const [editFollowersCount, setEditFollowersCount] = useState(
+    (meQuery.data?.followers_count || influencerProfile?.followersCount)?.toString() || ""
+  );
   const [isLinkCopied, setIsLinkCopied] = useState(false);
+
+  useEffect(() => {
+    if (meQuery.data && influencerProfile) {
+      const dbFollowersCount = meQuery.data.followers_count;
+      if (dbFollowersCount && dbFollowersCount !== influencerProfile.followersCount) {
+        console.log('[Profile] Syncing followers count from database:', dbFollowersCount);
+        setInfluencerProfile({
+          ...influencerProfile,
+          followersCount: dbFollowersCount,
+          followers: dbFollowersCount,
+        });
+      }
+    }
+  }, [meQuery.data?.followers_count]);
 
   const handleLogout = async () => {
     await logout();
@@ -194,7 +210,9 @@ export default function ProfilePage() {
     setEditFacebook(influencerProfile?.facebookUrl || "");
     setEditSnapchat(influencerProfile?.snapchatUrl || "");
     setEditPrimaryPlatform(influencerProfile?.primaryPlatform || "Instagram");
-    setEditFollowersCount(influencerProfile?.followersCount?.toString() || "");
+    setEditFollowersCount(
+      (meQuery.data?.followers_count || influencerProfile?.followersCount)?.toString() || ""
+    );
     setIsEditingInfluencerAbout(false);
   };
 
@@ -521,11 +539,12 @@ export default function ProfilePage() {
       <View style={styles.statsContainer}>
         <View style={styles.statItem}>
           <Text style={styles.statValue}>
-            {influencerProfile?.followersCount 
-              ? (influencerProfile.followersCount >= 1000 
-                  ? `${(influencerProfile.followersCount / 1000).toFixed(1)}K` 
-                  : influencerProfile.followersCount.toString())
-              : '0'}
+            {(() => {
+              const count = meQuery.data?.followers_count || influencerProfile?.followersCount || 0;
+              return count >= 1000 
+                ? `${(count / 1000).toFixed(1)}K` 
+                : count.toString();
+            })()}
           </Text>
           <Text style={styles.statLabel}>Followers</Text>
         </View>
@@ -557,7 +576,9 @@ export default function ProfilePage() {
               setEditFacebook(influencerProfile?.facebookUrl || "");
               setEditSnapchat(influencerProfile?.snapchatUrl || "");
               setEditPrimaryPlatform(influencerProfile?.primaryPlatform || "Instagram");
-              setEditFollowersCount(influencerProfile?.followersCount?.toString() || "");
+              setEditFollowersCount(
+                (meQuery.data?.followers_count || influencerProfile?.followersCount)?.toString() || ""
+              );
               setIsEditingInfluencerAbout(true);
             }}>
               <Edit2 size={20} color="#6366F1" />
