@@ -488,7 +488,7 @@ export async function getBrandTotalsForUser(userId: string) {
   const activeIds = activeCampaigns.map((c: { id: string }) => c.id);
 
   if (activeIds.length === 0) {
-    return { totalSpentActiveCampaigns: 0 };
+    return { totalSpentActiveCampaigns: 0, totalCollaborators: 0 };
   }
 
   const collaborators = await prisma.collaborator.findMany({
@@ -504,5 +504,5 @@ export async function getBrandTotalsForUser(userId: string) {
     0
   );
 
-  return { totalSpentActiveCampaigns: spent };
+  return { totalSpentActiveCampaigns: spent, totalCollaborators: collaborators.length };
 }

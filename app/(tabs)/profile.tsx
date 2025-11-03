@@ -28,7 +28,6 @@ import { trpc, getBaseUrl } from "@/lib/trpc";
 
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useUser } from "@/contexts/UserContext";
-import { useCampaigns } from "@/contexts/CampaignContext";
 
 export default function ProfilePage() {
   const { t } = useLanguage();
@@ -37,7 +36,10 @@ export default function ProfilePage() {
   const utils = trpc.useUtils();
   const meQuery = trpc.users.getProfile.useQuery(undefined, { refetchOnWindowFocus: true });
   const updateProfileMutation = trpc.users.updateProfile.useMutation();
-  const { campaigns } = useCampaigns();
+  const brandTotalsQuery = trpc.counters.getBrandTotals.useQuery(undefined, {
+    enabled: userType === "brand",
+    refetchOnWindowFocus: true,
+  });
   const [isEditingAbout, setIsEditingAbout] = useState(false);
   const [editWebsite, setEditWebsite] = useState(brandProfile?.website || "");
   const [editPhone, setEditPhone] = useState(brandProfile?.phone || "");
@@ -406,11 +408,7 @@ export default function ProfilePage() {
 
 
   const getTotalCollaborators = () => {
-    if (!brandProfile) return 0;
-    const brandCampaigns = campaigns.filter(c => c.brandId === brandProfile.id && c.status === "active");
-    return brandCampaigns.reduce((total, campaign) => {
-      return total + (campaign.collaborators?.length || 0);
-    }, 0);
+    return brandTotalsQuery.data?.totalCollaborators || 0;
   };
 
   const renderStars = (rating: number) => {
