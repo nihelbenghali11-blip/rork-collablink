@@ -53,6 +53,10 @@ export default function DashboardPage() {
   const totalsQuery = trpc.counters.getBrandTotals.useQuery(undefined, {
     enabled: userType === "brand",
   });
+  const meQuery = trpc.users.getProfile.useQuery(undefined, {
+    enabled: userType === "influencer",
+    refetchOnWindowFocus: true,
+  });
 
   const brandCampaignsFromDB: DbCampaign[] = useMemo(() => (campaignsQuery.data as unknown as DbCampaign[]) ?? [], [campaignsQuery.data]);
 
@@ -97,7 +101,7 @@ export default function DashboardPage() {
   };
 
   const influencerCampaignsAll = brandCampaignsFromDB;
-  const influencerProposedCount = influencerCampaignsAll.length;
+  const influencerProposedCount = meQuery.data?.campaign_count || brandCampaignsFromDB.length;
   const influencerTotalEarnings = influencerCampaignsAll.reduce((sum, c: any) => sum + (c.revenue_amount ?? 0), 0);
 
   const influencerStats = {

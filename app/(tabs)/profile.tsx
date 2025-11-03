@@ -48,10 +48,18 @@ export default function ProfilePage() {
   const [editFullName, setEditFullName] = useState(influencerProfile?.fullName || "");
   const [editBio, setEditBio] = useState(influencerProfile?.bio || "");
   const [editEmail, setEditEmail] = useState(influencerProfile?.email || "");
-  const [editInstagram, setEditInstagram] = useState(influencerProfile?.instagramUrl || "");
-  const [editTiktok, setEditTiktok] = useState(influencerProfile?.tiktokUrl || "");
-  const [editFacebook, setEditFacebook] = useState(influencerProfile?.facebookUrl || "");
-  const [editSnapchat, setEditSnapchat] = useState(influencerProfile?.snapchatUrl || "");
+  const [editInstagram, setEditInstagram] = useState(
+    (meQuery.data?.instagram_url as string) || influencerProfile?.instagramUrl || ""
+  );
+  const [editTiktok, setEditTiktok] = useState(
+    (meQuery.data?.tiktok_url as string) || influencerProfile?.tiktokUrl || ""
+  );
+  const [editFacebook, setEditFacebook] = useState(
+    (meQuery.data?.facebook_url as string) || influencerProfile?.facebookUrl || ""
+  );
+  const [editSnapchat, setEditSnapchat] = useState(
+    (meQuery.data?.snapchat_url as string) || influencerProfile?.snapchatUrl || ""
+  );
   const [editPrimaryPlatform, setEditPrimaryPlatform] = useState<"Instagram" | "TikTok" | "YouTube" | "Facebook" | "Snapchat">(influencerProfile?.primaryPlatform || "Instagram");
   const [editFollowersCount, setEditFollowersCount] = useState(
     (meQuery.data?.followers_count || influencerProfile?.followersCount)?.toString() || ""
@@ -61,16 +69,57 @@ export default function ProfilePage() {
   useEffect(() => {
     if (meQuery.data && influencerProfile) {
       const dbFollowersCount = meQuery.data.followers_count;
+      const dbInstagram = meQuery.data.instagram_url as string | undefined;
+      const dbTiktok = meQuery.data.tiktok_url as string | undefined;
+      const dbFacebook = meQuery.data.facebook_url as string | undefined;
+      const dbSnapchat = meQuery.data.snapchat_url as string | undefined;
+      
+      let needsUpdate = false;
+      const updates: Partial<typeof influencerProfile> = {};
+      
       if (dbFollowersCount && dbFollowersCount !== influencerProfile.followersCount) {
         console.log('[Profile] Syncing followers count from database:', dbFollowersCount);
+        updates.followersCount = dbFollowersCount;
+        updates.followers = dbFollowersCount;
+        needsUpdate = true;
+      }
+      
+      if (dbInstagram !== influencerProfile.instagramUrl) {
+        console.log('[Profile] Syncing Instagram URL from database:', dbInstagram);
+        updates.instagramUrl = dbInstagram;
+        setEditInstagram(dbInstagram || "");
+        needsUpdate = true;
+      }
+      
+      if (dbTiktok !== influencerProfile.tiktokUrl) {
+        console.log('[Profile] Syncing TikTok URL from database:', dbTiktok);
+        updates.tiktokUrl = dbTiktok;
+        setEditTiktok(dbTiktok || "");
+        needsUpdate = true;
+      }
+      
+      if (dbFacebook !== influencerProfile.facebookUrl) {
+        console.log('[Profile] Syncing Facebook URL from database:', dbFacebook);
+        updates.facebookUrl = dbFacebook;
+        setEditFacebook(dbFacebook || "");
+        needsUpdate = true;
+      }
+      
+      if (dbSnapchat !== influencerProfile.snapchatUrl) {
+        console.log('[Profile] Syncing Snapchat URL from database:', dbSnapchat);
+        updates.snapchatUrl = dbSnapchat;
+        setEditSnapchat(dbSnapchat || "");
+        needsUpdate = true;
+      }
+      
+      if (needsUpdate) {
         setInfluencerProfile({
           ...influencerProfile,
-          followersCount: dbFollowersCount,
-          followers: dbFollowersCount,
+          ...updates,
         });
       }
     }
-  }, [meQuery.data?.followers_count]);
+  }, [meQuery.data]);
 
   const handleLogout = async () => {
     await logout();
@@ -169,6 +218,13 @@ export default function ProfilePage() {
     }
 
     try {
+      console.log('[Profile] Saving influencer profile with URLs:', {
+        instagram_url: editInstagram || undefined,
+        tiktok_url: editTiktok || undefined,
+        facebook_url: editFacebook || undefined,
+        snapchat_url: editSnapchat || undefined,
+      });
+      
       await updateProfileMutation.mutateAsync({
         name: editFullName || undefined,
         email: editEmail || undefined,
@@ -180,7 +236,10 @@ export default function ProfilePage() {
         primary_platform: editPrimaryPlatform,
         followers_count: parseInt(editFollowersCount) || 0,
       });
+      
+      console.log('[Profile] Successfully saved to database');
       await meQuery.refetch();
+      
       if (influencerProfile) {
         await setInfluencerProfile({
           ...influencerProfile,
@@ -197,6 +256,7 @@ export default function ProfilePage() {
       }
       setIsEditingInfluencerAbout(false);
     } catch (e) {
+      console.error('[Profile] Error saving profile:', e);
       Alert.alert('Erreur', "Impossible d'enregistrer le profil");
     }
   };
@@ -718,36 +778,36 @@ export default function ProfilePage() {
               <Text style={styles.infoText}>{influencerProfile?.email}</Text>
             </View>
             
-            {(influencerProfile?.instagramUrl || influencerProfile?.tiktokUrl || influencerProfile?.facebookUrl || influencerProfile?.snapchatUrl) && (
+            {((meQuery.data?.instagram_url as string) || (meQuery.data?.tiktok_url as string) || (meQuery.data?.facebook_url as string) || (meQuery.data?.snapchat_url as string) || influencerProfile?.instagramUrl || influencerProfile?.tiktokUrl || influencerProfile?.facebookUrl || influencerProfile?.snapchatUrl) && (
               <View style={styles.socialIcons}>
-                {influencerProfile?.instagramUrl && (
+                {((meQuery.data?.instagram_url as string) || influencerProfile?.instagramUrl) && (
                   <Pressable 
                     style={styles.socialIcon}
-                    onPress={() => handleOpenSocialLink(influencerProfile.instagramUrl)}
+                    onPress={() => handleOpenSocialLink((meQuery.data?.instagram_url as string) || influencerProfile?.instagramUrl)}
                   >
                     <Instagram size={24} color="#E4405F" />
                   </Pressable>
                 )}
-                {influencerProfile?.tiktokUrl && (
+                {((meQuery.data?.tiktok_url as string) || influencerProfile?.tiktokUrl) && (
                   <Pressable 
                     style={styles.socialIcon}
-                    onPress={() => handleOpenSocialLink(influencerProfile.tiktokUrl)}
+                    onPress={() => handleOpenSocialLink((meQuery.data?.tiktok_url as string) || influencerProfile?.tiktokUrl)}
                   >
                     <Music2 size={24} color="#000000" />
                   </Pressable>
                 )}
-                {influencerProfile?.facebookUrl && (
+                {((meQuery.data?.facebook_url as string) || influencerProfile?.facebookUrl) && (
                   <Pressable 
                     style={styles.socialIcon}
-                    onPress={() => handleOpenSocialLink(influencerProfile.facebookUrl)}
+                    onPress={() => handleOpenSocialLink((meQuery.data?.facebook_url as string) || influencerProfile?.facebookUrl)}
                   >
                     <Facebook size={24} color="#1877F2" />
                   </Pressable>
                 )}
-                {influencerProfile?.snapchatUrl && (
+                {((meQuery.data?.snapchat_url as string) || influencerProfile?.snapchatUrl) && (
                   <Pressable 
                     style={styles.socialIcon}
-                    onPress={() => handleOpenSocialLink(influencerProfile.snapchatUrl)}
+                    onPress={() => handleOpenSocialLink((meQuery.data?.snapchat_url as string) || influencerProfile?.snapchatUrl)}
                   >
                     <Text style={styles.snapchatIcon}>👻</Text>
                   </Pressable>
