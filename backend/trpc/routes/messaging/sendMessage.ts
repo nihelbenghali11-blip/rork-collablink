@@ -19,6 +19,8 @@ export default protectedProcedure
     })
   )
   .mutation(async ({ ctx, input }) => {
+    console.log('[tRPC] sendMessage', { conversation_id: input.conversation_id, sender: ctx.userId });
+
     const res = await sendMessageToConversation({
       conversation_id: input.conversation_id,
       sender_user_id: ctx.userId!,
@@ -52,6 +54,8 @@ export default protectedProcedure
           } else {
             console.log('[Push] Expo response ok', json);
           }
+        } else {
+          console.log('[Push] No expo token for recipient', recipientId);
         }
       }
     } catch (e) {

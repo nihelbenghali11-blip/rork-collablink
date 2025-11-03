@@ -349,11 +349,28 @@ export async function sendMessageToConversation(params: {
     storage_url: string;
   };
 }) {
+  console.log('[DB] sendMessageToConversation called', {
+    conversation_id: params.conversation_id,
+    sender_user_id: params.sender_user_id,
+    hasAttachment: !!params.attachment,
+  });
+
   const conv = await prisma.conversation.findUnique({
     where: { id: params.conversation_id },
   });
   if (!conv || conv.deleted_at) {
-    throw new Error("Conversation not found");
+    console.log('[DB] Conversation not found or deleted', params.conversation_id);
+    throw new Error('Conversation not found');
+  }
+
+  // Verify sender participates in the conversation
+  if (params.sender_user_id !== conv.user_a_id && params.sender_user_id !== conv.user_b_id) {
+    console.log('[DB] Sender not part of conversation', {
+      sender_user_id: params.sender_user_id,
+      user_a_id: conv.user_a_id,
+      user_b_id: conv.user_b_id,
+    });
+    throw new Error('Forbidden');
   }
 
   const t = now();
@@ -375,7 +392,7 @@ export async function sendMessageToConversation(params: {
 
   const messageId = genId();
 
-  await prisma.message.create({
+  const message = await prisma.message.create({
     data: {
       id: messageId,
       conversation_id: conv.id,
@@ -386,6 +403,7 @@ export async function sendMessageToConversation(params: {
       read_at: null,
       deleted_at: null,
     },
+    include: { attachment: true },
   });
 
   const updateData: any = {
@@ -404,7 +422,25 @@ export async function sendMessageToConversation(params: {
     data: updateData,
   });
 
-  return { id: messageId };
+  console.log('[DB] Message created', { id: messageId });
+
+  return {
+    id: message.id,
+    conversation_id: message.conversation_id,
+    sender_id: message.sender_id,
+    content: message.content,
+    created_at: message.created_at.toISOString(),
+    read_at: message.read_at ? message.read_at.toISOString() : null,
+    attachment: message.attachment
+      ? {
+          id: message.attachment.id,
+          file_name: message.attachment.file_name,
+          mime_type: message.attachment.mime_type,
+          size: message.attachment.size,
+          storage_url: message.attachment.storage_url,
+        }
+      : null,
+  };
 }
 
 /*
