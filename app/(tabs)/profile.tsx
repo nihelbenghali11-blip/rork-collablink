@@ -209,17 +209,30 @@ export default function ProfilePage() {
   const handleShareProfile = async () => {
     try {
       const profileUrl = `https://collablink.app/profile/${influencerProfile?.userId || brandProfile?.userId}`;
-      const result = await Share.share({
-        message: `Découvrez mon profil sur CollabLink: ${profileUrl}`,
-        url: profileUrl,
-      });
+      const shareMessage = `Découvrez mon profil sur CollabLink: ${profileUrl}`;
+      
+      const result = await Share.share(
+        Platform.OS === 'ios'
+          ? { message: shareMessage, url: profileUrl }
+          : { message: shareMessage }
+      );
       
       if (result.action === Share.sharedAction) {
-        console.log('Profile shared successfully');
+        if (result.activityType) {
+          console.log('Profile shared with activity type:', result.activityType);
+        } else {
+          console.log('Profile shared successfully');
+        }
+      } else if (result.action === Share.dismissedAction) {
+        console.log('Share dismissed');
       }
     } catch (error) {
       console.error('Error sharing profile:', error);
-      Alert.alert('Erreur', 'Impossible de partager le profil');
+      if (error instanceof Error) {
+        Alert.alert('Erreur', `Impossible de partager le profil: ${error.message}`);
+      } else {
+        Alert.alert('Erreur', 'Impossible de partager le profil');
+      }
     }
   };
 
@@ -526,7 +539,7 @@ export default function ProfilePage() {
         </View>
         <View style={styles.statDivider} />
         <View style={styles.statItem}>
-          <Text style={styles.statValue}>{campaigns.filter(c => c.userId === influencerProfile?.userId && c.status === 'active').length}</Text>
+          <Text style={styles.statValue}>{meQuery.data?.campaign_count || 0}</Text>
           <Text style={styles.statLabel}>Campagnes</Text>
         </View>
       </View>

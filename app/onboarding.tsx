@@ -185,6 +185,8 @@ export default function OnboardingPage() {
           mainPlatform: formData.mainPlatform,
           followers:
             parseInt(formData.followers || "0", 10) || 0,
+          followersCount:
+            parseInt(formData.followers || "0", 10) || 0,
           bio: `Hi, I'm ${formData.fullName}!`,
           engagementRate: 4.5,
         });

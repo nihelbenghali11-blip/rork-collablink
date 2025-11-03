@@ -1,5 +1,6 @@
 import { protectedProcedure } from "@/backend/trpc/create-context";
 import { getUserById } from "@/backend/db";
+import prisma from "@/backend/prisma";
 
 export default protectedProcedure.query(async ({ ctx }) => {
   const user = await getUserById(ctx.userId!);
@@ -11,6 +12,14 @@ export default protectedProcedure.query(async ({ ctx }) => {
   const avatar_data_url = user.avatar_blob && user.avatar_mime_type
     ? `data:${user.avatar_mime_type};base64,${Buffer.from(user.avatar_blob as any).toString("base64")}`
     : null;
+
+  const campaign_count = await prisma.campaign.count({
+    where: {
+      owner_user_id: ctx.userId!,
+      status: "active",
+      deleted_at: null,
+    },
+  });
 
   return {
     id: user.id,
@@ -31,5 +40,6 @@ export default protectedProcedure.query(async ({ ctx }) => {
     avatar_url: avatar_data_url || user.avatar_url,
     rating_avg: user.rating_avg,
     created_at: user.created_at,
+    campaign_count,
   };
 });
