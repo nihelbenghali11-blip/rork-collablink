@@ -164,6 +164,8 @@ export default function CampaignDetailsPage() {
   }, [collaborators.length, dbCampaign?.collaborators]);
 
   // handlers (they are closures over stable hooks above)
+  const utils = trpc.useUtils();
+
   const handleAddCollaborator = async () => {
     if (
       !formData.firstName ||
@@ -211,6 +213,8 @@ export default function CampaignDetailsPage() {
       });
       setShowAddModal(false);
       await collaboratorsQuery.refetch();
+      await utils.counters.getBrandTotals.invalidate();
+      console.log("[handleAddCollaborator] Invalidated brand totals cache");
     } catch (error: any) {
       console.error("[handleAddCollaborator] Failed to add collaborator:", error);
       const errorMessage =
@@ -268,6 +272,8 @@ export default function CampaignDetailsPage() {
       setEditingId(null);
       setShowAddModal(false);
       await collaboratorsQuery.refetch();
+      await utils.counters.getBrandTotals.invalidate();
+      console.log("[handleEditCollaborator] Invalidated brand totals cache");
     } catch (error) {
       console.error("Failed to update collaborator:", error);
       Alert.alert(t("common.error"), "Failed to update collaborator");
@@ -283,6 +289,8 @@ export default function CampaignDetailsPage() {
       setCollaborators(updatedCollaborators);
       updateCampaign(campaignId, { collaborators: updatedCollaborators });
       await collaboratorsQuery.refetch();
+      await utils.counters.getBrandTotals.invalidate();
+      console.log("[handleDeleteCollaborator] Invalidated brand totals cache");
     } catch (error) {
       console.error("Failed to delete collaborator:", error);
       Alert.alert(t("common.error"), "Failed to delete collaborator");
