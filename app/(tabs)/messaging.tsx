@@ -1,9 +1,8 @@
 import { Stack, useRouter } from "expo-router";
-import { Image } from "expo-image";
 import Avatar from "@/components/Avatar";
 import { MessageCircle } from "lucide-react-native";
-import React, { useEffect, useMemo } from "react";
-import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import React, { useEffect } from "react";
+import { FlatList, Pressable, StyleSheet, Text, View, ActivityIndicator } from "react-native";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getBaseUrl, trpc } from "@/lib/trpc";
 import { useUser } from "@/contexts/UserContext";
@@ -11,13 +10,14 @@ import { useUser } from "@/contexts/UserContext";
 export default function MessagingPage() {
   const { t } = useLanguage();
   const router = useRouter();
-  const { currentUserId } = useUser();
+  const { currentUserId, isLoading: userLoading } = useUser();
 
   const convQuery = trpc.messaging.listConversations.useQuery(undefined, {
-    enabled: !!currentUserId,
+    enabled: !!currentUserId && !userLoading,
     refetchOnMount: true,
     refetchOnWindowFocus: true,
-    refetchInterval: 4000,
+    refetchInterval: currentUserId ? 4000 : false,
+    retry: false,
   });
 
   const conversations = convQuery.data ?? [];
@@ -30,11 +30,6 @@ export default function MessagingPage() {
     const fallback = `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=E5E7EB&color=111827`;
 
     const preferBlob = isA ? (item.userB_has_blob === true) : (item.userA_has_blob === true);
-    const avatarUrl = preferBlob && otherUser?.id
-      ? `${getBaseUrl()}/api/users/${otherUser.id}/avatar`
-      : (otherUser?.avatar_url && otherUser.avatar_url.length > 0)
-        ? otherUser.avatar_url
-        : (otherUser?.id ? `${getBaseUrl()}/api/users/${otherUser.id}/avatar` : fallback);
 
     const lastSeenISO: string | null = otherUser?.updated_at ?? null;
     const isOnline = (() => {
@@ -106,7 +101,20 @@ export default function MessagingPage() {
         }}
       />
       <View style={styles.container}>
-        {(conversations.length === 0) ? (
+        {userLoading || !currentUserId ? (
+          <View style={styles.emptyState}>
+            <ActivityIndicator size="large" color="#6366F1" />
+            <Text style={styles.emptyStateTitle}>{t("messaging.loading") || "Chargement..."}</Text>
+          </View>
+        ) : convQuery.isError ? (
+          <View style={styles.emptyState}>
+            <MessageCircle size={64} color="#EF4444" />
+            <Text style={styles.emptyStateTitle}>Erreur</Text>
+            <Text style={styles.emptyStateText}>
+              {convQuery.error?.message || "Impossible de charger les conversations"}
+            </Text>
+          </View>
+        ) : (conversations.length === 0) ? (
           <View style={styles.emptyState}>
             <MessageCircle size={64} color="#D1D5DB" />
             <Text style={styles.emptyStateTitle}>{t("messaging.noConversations")}</Text>

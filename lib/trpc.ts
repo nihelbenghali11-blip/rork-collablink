@@ -42,6 +42,7 @@ export const trpcClient = trpc.createClient({
       transformer: superjson,
       async headers() {
         const userId = currentUserId || (await getUserIdFromStorage());
+        console.log("[tRPC] Request headers - userId:", userId);
         return userId ? { "x-user-id": userId } : {};
       },
       fetch(url, options) {
