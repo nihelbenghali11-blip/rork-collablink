@@ -221,9 +221,14 @@ export default function ProfilePage() {
   };
 
   const handleCopyProfileLink = async () => {
-    const profileUrl = `https://collablink.app/profile/${influencerProfile?.userId || brandProfile?.userId}`;
-    await Clipboard.setStringAsync(profileUrl);
-    showToast('Lien copié ✓');
+    try {
+      const profileUrl = `https://collablink.app/profile/${influencerProfile?.userId || brandProfile?.userId}`;
+      await Clipboard.setStringAsync(profileUrl);
+      showToast('Lien copié ✓');
+    } catch (error) {
+      console.error('Error copying profile link:', error);
+      Alert.alert('Erreur', 'Impossible de copier le lien');
+    }
   };
 
   const handleOpenSocialLink = async (url?: string) => {
