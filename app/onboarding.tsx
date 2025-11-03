@@ -54,7 +54,6 @@ export default function OnboardingPage() {
     password: "",
     companyName: "",
     industry: "",
-    username: "",
     mainPlatform: "",
     followers: "",
   });
@@ -147,6 +146,14 @@ export default function OnboardingPage() {
       // Local profile persistence for app state
       const profileId = Date.now().toString();
 
+      const makeUsername = (name: string) =>
+        name
+          .toLowerCase()
+          .trim()
+          .replace(/[^a-z0-9\s_-]/g, "")
+          .replace(/\s+/g, "_")
+          .slice(0, 24) || `user_${profileId.slice(-6)}`;
+
       if (userType === "brand") {
         console.log(
           "[Onboarding] Saving brand profile to AsyncStorage"
@@ -172,7 +179,7 @@ export default function OnboardingPage() {
         await setInfluencerProfile({
           id: profileId,
           userId: result.id,
-          username: formData.username,
+          username: makeUsername(formData.fullName || formData.email),
           fullName: formData.fullName,
           email: formData.email,
           mainPlatform: formData.mainPlatform,
@@ -233,7 +240,6 @@ export default function OnboardingPage() {
     !!formData.fullName &&
     !!formData.email &&
     !!formData.password &&
-    !!formData.username &&
     !!formData.mainPlatform &&
     !!formData.followers;
 
@@ -374,24 +380,6 @@ export default function OnboardingPage() {
                     })
                   }
                   autoCapitalize="words"
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>
-                  {t("auth.username")}
-                </Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="@johndoe"
-                  value={formData.username}
-                  onChangeText={(text) =>
-                    setFormData({
-                      ...formData,
-                      username: text,
-                    })
-                  }
-                  autoCapitalize="none"
                 />
               </View>
 

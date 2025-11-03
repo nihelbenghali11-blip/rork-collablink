@@ -111,14 +111,6 @@ export default function LandingPage() {
               >
                 <Text style={styles.linkText}>{t("auth.signIn")}</Text>
               </Pressable>
-              <Text style={styles.dot}>•</Text>
-              <Pressable
-                testID="signup-button"
-                style={styles.linkButton}
-                onPress={() => router.push({ pathname: "/onboarding", params: { type: "brand" } } as any)}
-              >
-                <Text style={styles.linkText}>{t("auth.signUp")}</Text>
-              </Pressable>
             </View>
 
 
