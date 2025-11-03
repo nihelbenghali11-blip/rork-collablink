@@ -1,6 +1,8 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import createContextHook from "@nkzw/create-context-hook";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Platform } from "react-native";
+import * as Notifications from "expo-notifications";
 import { setTRPCUserId, trpc } from "@/lib/trpc";
 
 export type UserType = "brand" | "influencer" | null;
@@ -58,6 +60,7 @@ export const [UserProvider, useUser] = createContextHook(() => {
   }, []);
 
   const registerMutation = trpc.users.register.useMutation();
+  const updateProfileMutation = trpc.users.updateProfile.useMutation();
 
   const loadUserData = async () => {
     try {
@@ -172,6 +175,45 @@ export const [UserProvider, useUser] = createContextHook(() => {
   useEffect(() => {
     setTRPCUserId(currentUserId);
   }, [currentUserId]);
+
+  useEffect(() => {
+    const registerPushToken = async () => {
+      if (Platform.OS === "web") {
+        return;
+      }
+      try {
+        const { status: existingStatus } = await Notifications.getPermissionsAsync();
+        let finalStatus = existingStatus;
+        if (existingStatus !== "granted") {
+          const req = await Notifications.requestPermissionsAsync();
+          finalStatus = req.status;
+        }
+        if (finalStatus !== "granted") {
+          console.log("[Push] Permission not granted");
+          return;
+        }
+        const tokenResponse = await Notifications.getExpoPushTokenAsync();
+        const token = tokenResponse.data;
+        if (token && currentUserId) {
+          console.log("[Push] Got expo token", token);
+          await updateProfileMutation.mutateAsync({ expo_push_token: token });
+        }
+        if (Platform.OS === "android") {
+          await Notifications.setNotificationChannelAsync("default", {
+            name: "default",
+            importance: Notifications.AndroidImportance.MAX,
+            vibrationPattern: [0, 250, 250, 250],
+            lightColor: "#FF231F7C",
+          });
+        }
+      } catch (e) {
+        console.log("[Push] Failed to register token", e);
+      }
+    };
+    if (isAuthenticated) {
+      registerPushToken();
+    }
+  }, [isAuthenticated, currentUserId, updateProfileMutation]);
 
   return useMemo(() => ({
     userType,

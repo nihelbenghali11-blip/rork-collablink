@@ -32,9 +32,12 @@ export default protectedProcedure
         const recipientId = conv.user_a_id === ctx.userId ? conv.user_b_id : conv.user_a_id;
         const recipient = await prisma.user.findUnique({ where: { id: recipientId }, select: { expo_push_token: true, name: true } });
         if (recipient?.expo_push_token) {
-          await fetch('https://exp.host/--/api/v2/push/send', {
+          const resp = await fetch('https://exp.host/--/api/v2/push/send', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+            },
             body: JSON.stringify({
               to: recipient.expo_push_token,
               title: 'New message',
@@ -43,6 +46,12 @@ export default protectedProcedure
               data: { conversation_id: input.conversation_id },
             }),
           });
+          const json = await resp.json().catch(() => null);
+          if (!resp.ok || (json && json.data && json.data.status && json.data.status !== 'ok') || (json && json.errors)) {
+            console.log('[Push] Expo response error', { status: resp.status, json });
+          } else {
+            console.log('[Push] Expo response ok', json);
+          }
         }
       }
     } catch (e) {
