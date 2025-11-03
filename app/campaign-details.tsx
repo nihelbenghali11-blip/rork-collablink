@@ -63,6 +63,10 @@ export default function CampaignDetailsPage() {
     { enabled: !!campaignId }
   );
 
+  const campaignsQuery = trpc.campaigns.listActiveByOwner.useQuery(undefined, {
+    enabled: false,
+  });
+
   const collaboratorsQuery = trpc.collaborators.list.useQuery(
     { campaign_id: campaignId },
     { enabled: !!campaignId }
@@ -95,11 +99,13 @@ export default function CampaignDetailsPage() {
   const [isEditingObjectives, setIsEditingObjectives] = useState<boolean>(false);
   const [isEditingRequirements, setIsEditingRequirements] = useState<boolean>(false);
   const [isEditingHashtags, setIsEditingHashtags] = useState<boolean>(false);
+  const [isEditingDescription, setIsEditingDescription] = useState<boolean>(false);
 
   const [editedPlatforms, setEditedPlatforms] = useState<string[]>([]);
   const [editedObjectives, setEditedObjectives] = useState<string>("");
   const [editedRequirements, setEditedRequirements] = useState<string>("");
   const [editedHashtags, setEditedHashtags] = useState<string>("");
+  const [editedDescription, setEditedDescription] = useState<string>("");
   const [showPlatformPicker, setShowPlatformPicker] = useState<boolean>(false);
 
   const platformOptions: PlatformOption[] = [
@@ -115,6 +121,7 @@ export default function CampaignDetailsPage() {
       setEditedObjectives(dbCampaign.objectives || "");
       setEditedRequirements(dbCampaign.requirements || "");
       setEditedHashtags(dbCampaign.hashtags || "");
+      setEditedDescription(dbCampaign.description || "");
       if (Array.isArray(dbCampaign.collaborators)) {
         const mapped: Collaborator[] = (dbCampaign.collaborators as any[])
           .filter((c: any) => !c.deleted_at)
@@ -314,12 +321,18 @@ export default function CampaignDetailsPage() {
         style: "destructive",
         onPress: async () => {
           try {
+            console.log("[handleDeleteCampaign] Starting to delete campaign:", campaignId);
             await deleteMutation.mutateAsync({ id: campaignId });
+            console.log("[handleDeleteCampaign] Campaign deleted from DB successfully");
             await deleteCampaign(campaignId);
+            console.log("[handleDeleteCampaign] Campaign deleted from local context");
+            await getQuery.refetch();
+            await campaignsQuery.refetch();
+            console.log("[handleDeleteCampaign] Campaigns list refreshed");
             router.back();
           } catch (error) {
-            console.error("Failed to delete campaign:", error);
-            Alert.alert(t("common.error"), "Failed to delete campaign");
+            console.error("[handleDeleteCampaign] Failed to delete campaign:", error);
+            Alert.alert(t("common.error"), "Impossible de supprimer la campagne");
           }
         },
       },
@@ -380,13 +393,15 @@ export default function CampaignDetailsPage() {
               {(dbCampaign.revenue_amount ?? 0).toLocaleString()}
             </Text>
           </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statLabel}>{t("dashboard.totalSpent")}</Text>
-            <Text style={styles.statValue}>
-              {getCurrencySymbol(dbCampaign.revenue_currency || "EUR")}{" "}
-              {totalSpent.toLocaleString()}
-            </Text>
-          </View>
+          {userType === "brand" && (
+            <View style={styles.statCard}>
+              <Text style={styles.statLabel}>{t("dashboard.totalSpent")}</Text>
+              <Text style={styles.statValue}>
+                {getCurrencySymbol(dbCampaign.revenue_currency || "EUR")}{" "}
+                {totalSpent.toLocaleString()}
+              </Text>
+            </View>
+          )}
         </View>
 
         <View style={styles.section}>
@@ -451,8 +466,72 @@ export default function CampaignDetailsPage() {
         )}
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t("campaign.description")}</Text>
-          <Text style={styles.detailText}>{dbCampaign.description}</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>{t("campaign.description")}</Text>
+            {!isEditingDescription && (
+              <Pressable onPress={() => setIsEditingDescription(true)}>
+                <Edit2 size={18} color="#6366F1" />
+              </Pressable>
+            )}
+          </View>
+          {isEditingDescription ? (
+            <View>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                placeholder={t("campaign.descriptionPlaceholder")}
+                placeholderTextColor="#9CA3AF"
+                value={editedDescription}
+                onChangeText={setEditedDescription}
+                multiline
+                numberOfLines={3}
+                textAlignVertical="top"
+              />
+              <View style={styles.editActions}>
+                <Pressable
+                  style={styles.saveButton}
+                  onPress={async () => {
+                    try {
+                      const currentPlatforms = (dbCampaign.platforms || [])
+                        .map((p: any) => p.platform)
+                        .filter((p: string) => ["Instagram", "TikTok", "Facebook", "Snapchat"].includes(p)) as ("Instagram" | "TikTok" | "Facebook" | "Snapchat")[];
+                      await updateMutation.mutateAsync({
+                        id: campaignId,
+                        name: dbCampaign.name,
+                        brand_name: dbCampaign.brand_name ?? dbCampaign.brandName ?? "",
+                        description: editedDescription,
+                        revenue_amount: Number(dbCampaign.revenue_amount ?? 0),
+                        revenue_currency: dbCampaign.revenue_currency ?? "EUR",
+                        start_date: dbCampaign.start_date ?? null,
+                        status: (dbCampaign.status as "active" | "closed") ?? "active",
+                        platforms: currentPlatforms,
+                      });
+                      updateCampaign(campaignId, {
+                        description: editedDescription,
+                      });
+                      await getQuery.refetch();
+                    } catch {
+                      Alert.alert(t("common.error"), "Échec de la mise à jour de la description");
+                    } finally {
+                      setIsEditingDescription(false);
+                    }
+                  }}
+                >
+                  <Text style={styles.saveButtonText}>Save</Text>
+                </Pressable>
+                <Pressable
+                  style={styles.cancelButton}
+                  onPress={() => {
+                    setEditedDescription(dbCampaign.description || "");
+                    setIsEditingDescription(false);
+                  }}
+                >
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </Pressable>
+              </View>
+            </View>
+          ) : (
+            <Text style={styles.detailText}>{editedDescription || "N/A"}</Text>
+          )}
         </View>
 
         <View style={styles.section}>
@@ -549,7 +628,7 @@ export default function CampaignDetailsPage() {
                           platform: platformNames.join(", "),
                         });
                         await getQuery.refetch();
-                      } catch (e) {
+                      } catch {
                         Alert.alert(t("common.error"), "Échec de la mise à jour des plateformes");
                       } finally {
                         setIsEditingPlatforms(false);
