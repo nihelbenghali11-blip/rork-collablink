@@ -258,7 +258,7 @@ export default function SearchPage() {
           <SearchIcon size={20} color="#9CA3AF" />
           <TextInput
             style={styles.searchInput}
-            placeholder={t("search.searchPlaceholder")}
+            placeholder={isSearchingInfluencers ? t("search.searchPlaceholder") : t("search.searchBrandsPlaceholder")}
             value={searchQuery}
             onChangeText={setSearchQuery}
             placeholderTextColor="#9CA3AF"

@@ -112,8 +112,7 @@ export default function BrandProfilePage() {
               
             </View>
             <Text style={styles.industry}>{brand.sector ?? ""}</Text>
-
-            {typeof brand.rating_avg === "number" && (
+            {typeof brand.rating_avg === "number" && brand.rating_avg > 0 && (
               <View style={styles.ratingContainer}>
                 <View style={styles.starsRow}>
                   {renderStars(brand.rating_avg ?? 0)}
@@ -179,13 +178,10 @@ export default function BrandProfilePage() {
           </View>
         </View>
 
-        <View style={[styles.footer, { flexDirection: "row", gap: 12 }] }>
-          <Pressable style={[styles.contactButton, { flex: 1 }]} onPress={handleContact}>
+        <View style={styles.footer}>
+          <Pressable style={styles.contactButton} onPress={handleContact}>
             <MessageCircle size={22} color="#FFFFFF" />
             <Text style={styles.contactButtonText}>Contacter</Text>
-          </Pressable>
-          <Pressable style={[styles.contactButton, { flex: 1, backgroundColor: "#10B981" }]} onPress={() => router.push(`/rate?rateeId=${encodeURIComponent(brand.id)}&name=${encodeURIComponent(brand.name ?? "")}`)}>
-            <Text style={styles.contactButtonText}>Noter</Text>
           </Pressable>
         </View>
       </ScrollView>

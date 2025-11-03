@@ -80,6 +80,7 @@ export const translations = {
     search: {
       title: "Discover",
       searchPlaceholder: "Search influencers...",
+      searchBrandsPlaceholder: "Search brands...",
       filters: "Filters",
       platform: "Platform",
       followers: "Followers",
@@ -256,6 +257,7 @@ export const translations = {
     search: {
       title: "اكتشف",
       searchPlaceholder: "ابحث عن مؤثرين...",
+      searchBrandsPlaceholder: "ابحث عن العلامات التجارية...",
       filters: "التصفية",
       platform: "المنصة",
       followers: "المتابعون",
@@ -432,6 +434,7 @@ export const translations = {
     search: {
       title: "Découvrir",
       searchPlaceholder: "Rechercher des influenceurs...",
+      searchBrandsPlaceholder: "Rechercher des marques...",
       filters: "Filtres",
       platform: "Plateforme",
       followers: "Abonnés",
