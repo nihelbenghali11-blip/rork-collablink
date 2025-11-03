@@ -112,6 +112,12 @@ export default function ConversationPage() {
           <View style={{ width: 40 }} />
         </View>
 
+        {sendMutation.isError && (
+          <View style={{ paddingHorizontal: 16, paddingVertical: 8, backgroundColor: '#FEE2E2', borderBottomColor: '#FCA5A5', borderBottomWidth: 1 }}>
+            <Text style={{ color: '#991B1B' }}>{t('common.error')}</Text>
+          </View>
+        )}
+
         <GiftedChat
           messages={giftedMessages}
           onSend={(msgs) => onSend(msgs as IMessage[])}
@@ -155,6 +161,7 @@ export default function ConversationPage() {
             placeholderTextColor: "#9CA3AF",
             testID: "message-input",
             returnKeyType: "send",
+            editable: !sendMutation.isPending,
           } as any}
         />
       </View>

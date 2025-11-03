@@ -155,6 +155,7 @@ export const translations = {
       startConversation: "Start a new conversation",
       lastMessage: "Last message",
       newMessage: "New message",
+      typeMessage: "Type a message...",
     },
     settings: {
       currentPassword: "Current Password",
@@ -332,6 +333,7 @@ export const translations = {
       startConversation: "بدء محادثة جديدة",
       lastMessage: "آخر رسالة",
       newMessage: "رسالة جديدة",
+      typeMessage: "اكتب رسالة...",
     },
     settings: {
       currentPassword: "كلمة المرور الحالية",
@@ -509,6 +511,7 @@ export const translations = {
       startConversation: "Commencer une nouvelle conversation",
       lastMessage: "Dernier message",
       newMessage: "Nouveau message",
+      typeMessage: "Écrivez un message...",
     },
     settings: {
       currentPassword: "Mot de passe actuel",
