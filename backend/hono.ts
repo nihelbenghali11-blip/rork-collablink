@@ -22,9 +22,9 @@ app.use("*", async (c, next) => {
   await next();
 });
 
-// tRPC mount at /trpc/*
+// tRPC mount at /api/trpc/*
 app.use(
-  "/trpc/*",
+  "/api/trpc/*",
   trpcServer({
     router: appRouter,
     createContext,

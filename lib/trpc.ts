@@ -10,8 +10,7 @@ export const trpc = createTRPCReact<AppRouter>();
 // Hardcode backend base URL so Expo web and physical device both hit the same backend.
 // For local dev without ngrok you would replace with your machine IP on LAN.
 export const getBaseUrl = () => {
-  
-  return "https://towanda-proauthor-carlos.ngrok-free.dev";
+  return "";
 };
 
 // In-memory cache of userId so we do not hit AsyncStorage every call
@@ -38,7 +37,7 @@ const getUserIdFromStorage = async (): Promise<string | null> => {
 export const trpcClient = trpc.createClient({
   links: [
     httpLink({
-      url: `${getBaseUrl()}/trpc`,
+      url: `${getBaseUrl()}/api/trpc`,
       transformer: superjson,
       async headers() {
         const userId = currentUserId || (await getUserIdFromStorage());
