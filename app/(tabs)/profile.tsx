@@ -40,11 +40,12 @@ export default function ProfilePage() {
     enabled: userType === "brand",
     refetchOnWindowFocus: true,
   });
-  const [isEditingAbout, setIsEditingAbout] = useState(false);
-  const [editWebsite, setEditWebsite] = useState(brandProfile?.website || "");
-  const [editPhone, setEditPhone] = useState(brandProfile?.phone || "");
-  const [editAddress, setEditAddress] = useState(brandProfile?.address || "");
-  const [editDescription, setEditDescription] = useState(brandProfile?.description || "");
+  const [isEditingAbout, setIsEditingAbout] = useState<boolean>(false);
+  const [editWebsite, setEditWebsite] = useState<string>(brandProfile?.website || (meQuery.data?.website as string) || "");
+  const [editPhone, setEditPhone] = useState<string>(brandProfile?.phone || (meQuery.data?.phone as string) || "");
+  const [editAddress, setEditAddress] = useState<string>(brandProfile?.address || (meQuery.data?.address as string) || "");
+  const [editDescription, setEditDescription] = useState<string>(brandProfile?.description || (meQuery.data?.bio as string) || "");
+  const [editCategory, setEditCategory] = useState<string>(brandProfile?.industry || (meQuery.data?.sector as string) || "");
   
   const [isEditingInfluencerAbout, setIsEditingInfluencerAbout] = useState(false);
   const [editFullName, setEditFullName] = useState(influencerProfile?.fullName || "");
@@ -380,6 +381,7 @@ export default function ProfilePage() {
         phone: editPhone || undefined,
         address: editAddress || undefined,
         bio: editDescription || undefined,
+        sector: editCategory || undefined,
       });
       await meQuery.refetch();
       if (brandProfile) {
@@ -389,6 +391,7 @@ export default function ProfilePage() {
           phone: editPhone,
           address: editAddress,
           description: editDescription,
+          industry: editCategory,
         });
       }
       setIsEditingAbout(false);
@@ -398,10 +401,11 @@ export default function ProfilePage() {
   };
 
   const handleCancelEdit = () => {
-    setEditWebsite(brandProfile?.website || "");
-    setEditPhone(brandProfile?.phone || "");
-    setEditAddress(brandProfile?.address || "");
-    setEditDescription(brandProfile?.description || "");
+    setEditWebsite(brandProfile?.website || (meQuery.data?.website as string) || "");
+    setEditPhone(brandProfile?.phone || (meQuery.data?.phone as string) || "");
+    setEditAddress(brandProfile?.address || (meQuery.data?.address as string) || "");
+    setEditDescription(brandProfile?.description || (meQuery.data?.bio as string) || "");
+    setEditCategory(brandProfile?.industry || (meQuery.data?.sector as string) || "");
     setIsEditingAbout(false);
   };
 
@@ -523,6 +527,16 @@ export default function ProfilePage() {
                 textAlignVertical="top"
               />
             </View>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Catégorie</Text>
+              <TextInput
+                style={styles.input}
+                value={editCategory}
+                onChangeText={setEditCategory}
+                placeholder="Ex: Technologie, Mode, Beauté"
+                placeholderTextColor="#9CA3AF"
+              />
+            </View>
             <View style={styles.editActions}>
               <Pressable style={styles.saveButton} onPress={handleSaveAbout}>
                 <Text style={styles.saveButtonText}>{t("common.save")}</Text>
@@ -540,7 +554,7 @@ export default function ProfilePage() {
             </View>
             <View style={styles.infoItem}>
               <Briefcase size={20} color="#6B7280" />
-              <Text style={styles.infoText}>{brandProfile?.industry}</Text>
+              <Text style={styles.infoText}>{brandProfile?.industry || (meQuery.data?.sector as string) || ""}</Text>
             </View>
             {brandProfile?.website && (
               <View style={styles.infoItem}>

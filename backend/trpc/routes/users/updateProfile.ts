@@ -16,6 +16,7 @@ export default protectedProcedure
       tiktok_url: z.string().url().optional(),
       facebook_url: z.string().url().optional(),
       snapchat_url: z.string().url().optional(),
+      sector: z.string().optional(),
       primary_platform: z
         .enum(["Instagram", "TikTok", "YouTube", "Facebook", "Snapchat"])
         .optional(),
