@@ -169,11 +169,16 @@ export default function BrandProfilePage() {
 
           <View style={styles.infoRow}>
             <View style={styles.iconContainer}>
-              <Mail size={20} color="#6366F1" />
+              <Star size={20} color="#F59E0B" fill="#F59E0B" />
             </View>
             <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Secteur</Text>
-              <Text style={styles.infoValue}>{brand.sector ?? ""}</Text>
+              <Text style={styles.infoLabel}>Note</Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                <View style={styles.starsRow}>
+                  {renderStars(Number(brand.rating_avg ?? 0))}
+                </View>
+                <Text style={styles.infoValue}>{Number(brand.rating_avg ?? 0).toFixed(1)}</Text>
+              </View>
             </View>
           </View>
         </View>
