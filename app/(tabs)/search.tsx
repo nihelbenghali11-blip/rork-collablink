@@ -24,14 +24,17 @@ export default function SearchPage() {
   const { t } = useLanguage();
   const router = useRouter();
   const { userType } = useUser();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [showFilters, setShowFilters] = useState(false);
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [showFilters, setShowFilters] = useState<boolean>(false);
   
   type PlatformType = "Instagram" | "TikTok" | "YouTube" | "Facebook" | "Snapchat" | null;
   const [selectedPlatform, setSelectedPlatform] = useState<PlatformType>(null);
   const [selectedPriceIndex, setSelectedPriceIndex] = useState<PriceIndex>(null);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [sortByFollowers, setSortByFollowers] = useState<SortOrder>(null);
+
+  const [brandCategory, setBrandCategory] = useState<string | null>(null);
+  const [brandAddress, setBrandAddress] = useState<string>("");
   
   const isSearchingInfluencers = userType === "brand";
   const influencersInput = useMemo(() => {
@@ -98,8 +101,17 @@ export default function SearchPage() {
       }
       return influencers as unknown as any[];
     }
-    return (data as BrandItem[]);
-  }, [data, isSearchingInfluencers, selectedPlatform, sortByFollowers]);
+
+    let brands = (data as BrandItem[]);
+    if (brandCategory) {
+      brands = brands.filter((b) => (b.sector ?? "").toLowerCase() === brandCategory.toLowerCase());
+    }
+    if ((brandAddress?.trim()?.length ?? 0) > 0) {
+      const addr = brandAddress.trim().toLowerCase();
+      brands = brands.filter((b) => (b.address ?? "").toLowerCase().includes(addr));
+    }
+    return brands as unknown as any[];
+  }, [data, isSearchingInfluencers, selectedPlatform, sortByFollowers, brandCategory, brandAddress]);
 
   const getPriceIndexDisplay = (priceIndex: string) => {
     switch (priceIndex) {
@@ -138,19 +150,41 @@ export default function SearchPage() {
     "Travel & Adventure",
   ];
 
+  const brandCategories = useMemo(() => {
+    const list = (brandsQuery.data?.items ?? []).map((b: unknown) => (b as BrandItem).sector).filter(Boolean) as string[];
+    const uniq = Array.from(new Set(list));
+    return uniq.length > 0 ? uniq : [
+      "Fashion",
+      "Technology",
+      "Food",
+      "Beauty",
+      "Travel",
+      "Fitness",
+    ];
+  }, [brandsQuery.data]);
+
   const clearFilters = () => {
     setSelectedPlatform(null);
     setSelectedPriceIndex(null);
     setSelectedCategories([]);
     setSortByFollowers(null);
+    setBrandCategory(null);
+    setBrandAddress("");
   };
 
-  const activeFiltersCount = [
-    selectedPlatform,
-    selectedPriceIndex,
-    selectedCategories.length > 0 ? true : false,
-    sortByFollowers,
-  ].filter(Boolean).length;
+  const activeFiltersCount = (
+    isSearchingInfluencers
+      ? [
+          selectedPlatform,
+          selectedPriceIndex,
+          selectedCategories.length > 0 ? true : false,
+          sortByFollowers,
+        ]
+      : [
+          brandCategory,
+          (brandAddress?.trim()?.length ?? 0) > 0 ? true : false,
+        ]
+  ).filter(Boolean).length;
 
   const renderInfluencerCard = (influencer: InflItem) => (
     <Pressable
@@ -273,19 +307,17 @@ export default function SearchPage() {
             placeholderTextColor="#9CA3AF"
           />
         </View>
-        {isSearchingInfluencers && (
-          <Pressable
-            style={styles.filterButton}
-            onPress={() => setShowFilters(true)}
-          >
-            <Filter size={20} color="#6366F1" />
-            {activeFiltersCount > 0 && (
-              <View style={styles.filterBadge}>
-                <Text style={styles.filterBadgeText}>{activeFiltersCount}</Text>
-              </View>
-            )}
-          </Pressable>
-        )}
+        <Pressable
+          style={styles.filterButton}
+          onPress={() => setShowFilters(true)}
+        >
+          <Filter size={20} color="#6366F1" />
+          {activeFiltersCount > 0 && (
+            <View style={styles.filterBadge}>
+              <Text style={styles.filterBadgeText}>{activeFiltersCount}</Text>
+            </View>
+          )}
+        </Pressable>
       </View>
 
       <FlatList
@@ -300,7 +332,7 @@ export default function SearchPage() {
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={() => (
           <View style={{ padding: 24 }}>
-            <Text style={{ color: "#6B7280" }}>No results</Text>
+            <Text style={{ color: "#6B7280" }}>{t("common.noInfluencers")}</Text>
           </View>
         )}
       />
@@ -323,147 +355,192 @@ export default function SearchPage() {
             style={styles.modalContent}
             contentContainerStyle={styles.modalContentInner}
           >
-            <View style={styles.filterSection}>
-              <Text style={styles.filterSectionTitle}>{t("search.platform")}</Text>
-              <View style={styles.filterOptions}>
-                {platforms.map((platform) => (
-                  <Pressable
-                    key={platform}
-                    style={[
-                      styles.filterOption,
-                      selectedPlatform === platform && styles.filterOptionActive,
-                    ]}
-                    onPress={() =>
-                      setSelectedPlatform(
-                        selectedPlatform === platform ? null : platform
-                      )
-                    }
-                  >
-                    <Text
-                      style={[
-                        styles.filterOptionText,
-                        selectedPlatform === platform &&
-                          styles.filterOptionTextActive,
-                      ]}
-                    >
-                      {platform}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
+            {isSearchingInfluencers ? (
+              <>
+                <View style={styles.filterSection}>
+                  <Text style={styles.filterSectionTitle}>{t("search.platform")}</Text>
+                  <View style={styles.filterOptions}>
+                    {platforms.map((platform) => (
+                      <Pressable
+                        key={platform}
+                        style={[
+                          styles.filterOption,
+                          selectedPlatform === platform && styles.filterOptionActive,
+                        ]}
+                        onPress={() =>
+                          setSelectedPlatform(
+                            selectedPlatform === platform ? null : platform
+                          )
+                        }
+                      >
+                        <Text
+                          style={[
+                            styles.filterOptionText,
+                            selectedPlatform === platform &&
+                              styles.filterOptionTextActive,
+                          ]}
+                        >
+                          {platform}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                </View>
 
-            <View style={styles.filterSection}>
-              <Text style={styles.filterSectionTitle}>{t("search.priceIndex")}</Text>
-              <View style={styles.filterOptions}>
-                {priceIndices.map((priceIndex) => {
-                  const display = getPriceIndexDisplay(priceIndex);
-                  return (
+                <View style={styles.filterSection}>
+                  <Text style={styles.filterSectionTitle}>{t("search.priceIndex")}</Text>
+                  <View style={styles.filterOptions}>
+                    {priceIndices.map((priceIndex) => {
+                      const display = getPriceIndexDisplay(priceIndex);
+                      return (
+                        <Pressable
+                          key={priceIndex}
+                          style={[
+                            styles.filterOption,
+                            selectedPriceIndex === priceIndex &&
+                              styles.filterOptionActive,
+                          ]}
+                          onPress={() =>
+                            setSelectedPriceIndex(
+                              selectedPriceIndex === priceIndex ? null : priceIndex
+                            )
+                          }
+                        >
+                          <Text
+                            style={[
+                              styles.filterOptionText,
+                              selectedPriceIndex === priceIndex &&
+                                styles.filterOptionTextActive,
+                            ]}
+                          >
+                            {display}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </View>
+
+                <View style={styles.filterSection}>
+                  <Text style={styles.filterSectionTitle}>{t("search.category")}</Text>
+                  <View style={styles.filterOptions}>
+                    {categories.map((category) => {
+                      const isSelected = selectedCategories.includes(category);
+                      return (
+                        <Pressable
+                          key={category}
+                          style={[
+                            styles.filterOption,
+                            isSelected && styles.filterOptionActive,
+                          ]}
+                          onPress={() => {
+                            if (isSelected) {
+                              setSelectedCategories(
+                                selectedCategories.filter((c) => c !== category)
+                              );
+                            } else {
+                              setSelectedCategories([...selectedCategories, category]);
+                            }
+                          }}
+                        >
+                          <Text
+                            style={[
+                              styles.filterOptionText,
+                              isSelected && styles.filterOptionTextActive,
+                            ]}
+                          >
+                            {category}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </View>
+
+                <View style={styles.filterSection}>
+                  <Text style={styles.filterSectionTitle}>{t("search.sortBy")}</Text>
+                  <View style={styles.filterOptions}>
                     <Pressable
-                      key={priceIndex}
                       style={[
                         styles.filterOption,
-                        selectedPriceIndex === priceIndex &&
-                          styles.filterOptionActive,
+                        sortByFollowers === "asc" && styles.filterOptionActive,
                       ]}
                       onPress={() =>
-                        setSelectedPriceIndex(
-                          selectedPriceIndex === priceIndex ? null : priceIndex
-                        )
+                        setSortByFollowers(sortByFollowers === "asc" ? null : "asc")
                       }
                     >
                       <Text
                         style={[
                           styles.filterOptionText,
-                          selectedPriceIndex === priceIndex &&
-                            styles.filterOptionTextActive,
+                          sortByFollowers === "asc" && styles.filterOptionTextActive,
                         ]}
                       >
-                        {display}
+                        {t("search.followersAsc")}
                       </Text>
                     </Pressable>
-                  );
-                })}
-              </View>
-            </View>
-
-            <View style={styles.filterSection}>
-              <Text style={styles.filterSectionTitle}>{t("search.category")}</Text>
-              <View style={styles.filterOptions}>
-                {categories.map((category) => {
-                  const isSelected = selectedCategories.includes(category);
-                  return (
                     <Pressable
-                      key={category}
                       style={[
                         styles.filterOption,
-                        isSelected && styles.filterOptionActive,
+                        sortByFollowers === "desc" && styles.filterOptionActive,
                       ]}
-                      onPress={() => {
-                        if (isSelected) {
-                          setSelectedCategories(
-                            selectedCategories.filter((c) => c !== category)
-                          );
-                        } else {
-                          setSelectedCategories([...selectedCategories, category]);
-                        }
-                      }}
+                      onPress={() =>
+                        setSortByFollowers(sortByFollowers === "desc" ? null : "desc")
+                      }
                     >
                       <Text
                         style={[
                           styles.filterOptionText,
-                          isSelected && styles.filterOptionTextActive,
+                          sortByFollowers === "desc" && styles.filterOptionTextActive,
                         ]}
                       >
-                        {category}
+                        {t("search.followersDesc")}
                       </Text>
                     </Pressable>
-                  );
-                })}
-              </View>
-            </View>
+                  </View>
+                </View>
+              </>
+            ) : (
+              <>
+                <View style={styles.filterSection}>
+                  <Text style={styles.filterSectionTitle}>{t("search.category")}</Text>
+                  <View style={styles.filterOptions}>
+                    {brandCategories.map((cat) => (
+                      <Pressable
+                        key={cat}
+                        style={[
+                          styles.filterOption,
+                          brandCategory === cat && styles.filterOptionActive,
+                        ]}
+                        onPress={() => setBrandCategory(brandCategory === cat ? null : cat)}
+                      >
+                        <Text
+                          style={[
+                            styles.filterOptionText,
+                            brandCategory === cat && styles.filterOptionTextActive,
+                          ]}
+                        >
+                          {cat}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                </View>
 
-            <View style={styles.filterSection}>
-              <Text style={styles.filterSectionTitle}>{t("search.sortBy")}</Text>
-              <View style={styles.filterOptions}>
-                <Pressable
-                  style={[
-                    styles.filterOption,
-                    sortByFollowers === "asc" && styles.filterOptionActive,
-                  ]}
-                  onPress={() =>
-                    setSortByFollowers(sortByFollowers === "asc" ? null : "asc")
-                  }
-                >
-                  <Text
-                    style={[
-                      styles.filterOptionText,
-                      sortByFollowers === "asc" && styles.filterOptionTextActive,
-                    ]}
-                  >
-                    {t("search.followersAsc")}
-                  </Text>
-                </Pressable>
-                <Pressable
-                  style={[
-                    styles.filterOption,
-                    sortByFollowers === "desc" && styles.filterOptionActive,
-                  ]}
-                  onPress={() =>
-                    setSortByFollowers(sortByFollowers === "desc" ? null : "desc")
-                  }
-                >
-                  <Text
-                    style={[
-                      styles.filterOptionText,
-                      sortByFollowers === "desc" && styles.filterOptionTextActive,
-                    ]}
-                  >
-                    {t("search.followersDesc")}
-                  </Text>
-                </Pressable>
-              </View>
-            </View>
+                <View style={styles.filterSection}>
+                  <Text style={styles.filterSectionTitle}>{t("profile.address")}</Text>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                    <MapPin size={18} color="#6B7280" />
+                    <TextInput
+                      style={[styles.searchInput, { backgroundColor: "#F3F4F6", borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10 }]}
+                      placeholder={t("search.location")}
+                      placeholderTextColor="#9CA3AF"
+                      value={brandAddress}
+                      onChangeText={setBrandAddress}
+                    />
+                  </View>
+                </View>
+              </>
+            )}
           </ScrollView>
 
           <View style={styles.modalFooter}>
