@@ -7,10 +7,22 @@ import { Platform } from "react-native";
 
 export const trpc = createTRPCReact<AppRouter>();
 
-// Hardcode backend base URL so Expo web and physical device both hit the same backend.
-// For local dev without ngrok you would replace with your machine IP on LAN.
+// Backend base URL resolution for web, simulator, and devices
 export const getBaseUrl = () => {
-  return "";
+  const envUrl =
+    // Primary configurable public API URL
+    (process.env.EXPO_PUBLIC_API_URL as string | undefined) ||
+    (process.env.EXPO_PUBLIC_RORK_API_BASE_URL as string | undefined);
+
+  if (envUrl && envUrl.length > 0) return envUrl.replace(/\/$/, "");
+
+  // Reasonable defaults for local dev
+  if (Platform.OS === "web") {
+    return "http://localhost:3001";
+  }
+
+  // For native, require EXPO_PUBLIC_API_URL to be set when testing on device
+  return "http://localhost:3001";
 };
 
 // In-memory cache of userId so we do not hit AsyncStorage every call
