@@ -233,12 +233,21 @@ export default function SearchPage() {
         <View style={styles.cardInfo}>
           <View style={styles.cardHeader}>
             <Text style={styles.cardName}>{brand.name ?? "Unnamed"}</Text>
-            
           </View>
-          <Text style={styles.cardUsername}>{brand.sector ?? ""}</Text>
-          <Text style={styles.brandDescription} numberOfLines={2}>
-            {brand.bio ?? ""}
-          </Text>
+          <View style={styles.cardMeta}>
+            <View style={styles.metaItem}>
+              <CheckCircle2 size={14} color="#F59E0B" />
+              <Text style={styles.metaText}>
+                {t("profile.rating")}: {Number(brand.rating_avg ?? 0).toFixed(1)}
+              </Text>
+            </View>
+          </View>
+          <View style={styles.cardMeta}>
+            <View style={styles.metaItem}>
+              <MapPin size={14} color="#6B7280" />
+              <Text style={styles.metaText}>{brand.address ?? ""}</Text>
+            </View>
+          </View>
           <View style={styles.tags}>
             <View style={styles.tag}>
               <Text style={styles.tagText}>
