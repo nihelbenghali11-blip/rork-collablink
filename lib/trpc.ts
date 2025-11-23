@@ -9,20 +9,9 @@ export const trpc = createTRPCReact<AppRouter>();
 
 // Backend base URL resolution for web, simulator, and devices
 export const getBaseUrl = () => {
-  const envUrl =
-    // Primary configurable public API URL
-    (process.env.EXPO_PUBLIC_API_URL as string | undefined) ||
-    (process.env.EXPO_PUBLIC_RORK_API_BASE_URL as string | undefined);
+   return "https://towanda-proauthor-carlos.ngrok-free.dev";
 
-  if (envUrl && envUrl.length > 0) return envUrl.replace(/\/$/, "");
 
-  // Reasonable defaults for local dev
-  if (Platform.OS === "web") {
-    return "http://localhost:3001";
-  }
-
-  // For native, require EXPO_PUBLIC_API_URL to be set when testing on device
-  return "http://localhost:3001";
 };
 
 // In-memory cache of userId so we do not hit AsyncStorage every call
