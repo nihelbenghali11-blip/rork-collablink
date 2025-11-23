@@ -49,7 +49,7 @@ const getUserIdFromStorage = async (): Promise<string | null> => {
 export const trpcClient = trpc.createClient({
   links: [
     httpLink({
-      url: `${getBaseUrl()}/api/trpc`,
+      url: `${getBaseUrl()}/trpc`,
       transformer: superjson,
       async headers() {
         const userId = currentUserId || (await getUserIdFromStorage());

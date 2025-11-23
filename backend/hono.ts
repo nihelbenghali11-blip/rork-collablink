@@ -7,28 +7,20 @@ import prisma from "@/backend/prisma";
 
 const app = new Hono();
 
-const allowedOrigins = (process.env.ALLOWED_ORIGINS ?? "")
-  .split(",")
-  .map((entry) => entry.trim())
-  .filter(Boolean);
-const defaultOrigin = allowedOrigins[0] ?? "http://localhost:8081";
-const resolveCorsOrigin = (incomingOrigin?: string | null) => {
-  if (!incomingOrigin) {
-    return defaultOrigin;
-  }
-  if (allowedOrigins.length === 0 || allowedOrigins.includes("*")) {
-    return incomingOrigin;
-  }
-  return allowedOrigins.includes(incomingOrigin) ? incomingOrigin : defaultOrigin;
-};
-
+// CORS: allow all origins
 app.use(
   "*",
   cors({
-    origin: (origin) => resolveCorsOrigin(origin),
+    origin: "*", // allow all origins
     credentials: true,
-    allowHeaders: ["Content-Type", "Authorization", "x-user-id"],
     allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowHeaders: [
+      "Content-Type",
+      "Authorization",
+      "x-user-id",
+      "ngrok-skip-browser-warning",
+      "trpc-batch-mode",
+    ],
     exposeHeaders: ["Content-Length"],
     maxAge: 86400,
   })
@@ -40,9 +32,9 @@ app.use("*", async (c, next) => {
   await next();
 });
 
-// tRPC mount at /api/trpc/*
+// tRPC mount
 app.use(
-  "/api/trpc/*",
+  "/trpc/*",
   trpcServer({
     router: appRouter,
     createContext,
@@ -58,12 +50,16 @@ app.get("/api/health", (c) => {
   });
 });
 
-// Presence ping: updates user's updated_at as last seen
+// Presence ping
 app.post("/api/presence/ping", async (c) => {
   const userId = c.req.header("x-user-id");
   if (!userId) return c.json({ ok: false }, 401);
+
   try {
-    await prisma.user.update({ where: { id: userId }, data: { updated_at: new Date() } });
+    await prisma.user.update({
+      where: { id: userId },
+      data: { updated_at: new Date() },
+    });
   } catch (e) {
     console.log("[Presence] Update failed", e);
   }
@@ -74,7 +70,10 @@ app.post("/api/presence/ping", async (c) => {
 app.get("/api/users/:id/avatar", async (c) => {
   const id = c.req.param("id");
   try {
-    const user = await prisma.user.findUnique({ where: { id }, select: { avatar_blob: true, avatar_mime_type: true } });
+    const user = await prisma.user.findUnique({
+      where: { id },
+      select: { avatar_blob: true, avatar_mime_type: true },
+    });
     if (!user?.avatar_blob || !user.avatar_mime_type) {
       return c.json({ error: "Not found" }, 404);
     }
