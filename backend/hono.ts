@@ -7,12 +7,30 @@ import prisma from "@/backend/prisma";
 
 const app = new Hono();
 
-// CORS for Expo / ngrok
+const allowedOrigins = (process.env.ALLOWED_ORIGINS ?? "")
+  .split(",")
+  .map((entry) => entry.trim())
+  .filter(Boolean);
+const defaultOrigin = allowedOrigins[0] ?? "http://localhost:8081";
+const resolveCorsOrigin = (incomingOrigin?: string | null) => {
+  if (!incomingOrigin) {
+    return defaultOrigin;
+  }
+  if (allowedOrigins.length === 0 || allowedOrigins.includes("*")) {
+    return incomingOrigin;
+  }
+  return allowedOrigins.includes(incomingOrigin) ? incomingOrigin : defaultOrigin;
+};
+
 app.use(
   "*",
   cors({
-    origin: "*",
+    origin: (origin) => resolveCorsOrigin(origin),
     credentials: true,
+    allowHeaders: ["Content-Type", "Authorization", "x-user-id"],
+    allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    exposeHeaders: ["Content-Length"],
+    maxAge: 86400,
   })
 );
 
