@@ -24,6 +24,8 @@ model User {
   avatar_mime_type String?
   expo_push_token  String?
   default_currency String?
+  pricing_tier     PricingTier?
+  pricing_currency String?
   rating_avg       Float?
   instagram_url    String?
   tiktok_url       String?
@@ -170,4 +172,10 @@ enum PlatformName {
   YouTube
   Facebook
   Snapchat
+}
+
+enum PricingTier {
+  UNDER_1000
+  BETWEEN_1000_5000
+  ABOVE_5000
 }

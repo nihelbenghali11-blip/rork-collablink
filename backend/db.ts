@@ -30,6 +30,8 @@ export async function updateUserProfile(
     snapchat_url?: string;
     primary_platform?: string;
     followers_count?: number;
+    price_tier?: "UNDER_1000" | "BETWEEN_1000_5000" | "ABOVE_5000";
+    price_currency?: string;
     expo_push_token?: string | null;
   }
 ) {

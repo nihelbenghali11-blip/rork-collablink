@@ -54,6 +54,8 @@ export default publicProcedure
         tiktok_url: true,
         facebook_url: true,
         snapchat_url: true,
+        pricing_tier: true,
+        pricing_currency: true,
         created_at: true,
       },
     });
@@ -74,6 +76,8 @@ export default publicProcedure
         tiktok_url: u.tiktok_url,
         facebook_url: u.facebook_url,
         snapchat_url: u.snapchat_url,
+        pricing_tier: u.pricing_tier,
+        pricing_currency: u.pricing_currency,
         created_at: u.created_at,
       };
     });

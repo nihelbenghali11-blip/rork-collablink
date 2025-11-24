@@ -23,6 +23,8 @@ export default publicProcedure
         rating_avg: true,
         primary_platform: true,
         followers_count: true,
+        pricing_tier: true,
+        pricing_currency: true,
         instagram_url: true,
         tiktok_url: true,
         facebook_url: true,

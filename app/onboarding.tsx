@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -15,6 +15,14 @@ import { Briefcase, ChevronLeft, Megaphone } from "lucide-react-native";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useUser } from "@/contexts/UserContext";
 import { trpc, getBaseUrl } from "@/lib/trpc";
+import {
+  PricingTier,
+  PRICING_TIER_META,
+  PRICING_BADGE_LABEL_KEYS,
+  PRICING_BADGE_COLORS,
+  pricingTierOrder,
+  getBadgeFromTier,
+} from "@/constants/pricing";
 
 // Map free text to enum accepted by backend
 // Backend expects one of: "Instagram" | "TikTok" | "YouTube" | "Facebook" | "Snapchat"
@@ -39,6 +47,18 @@ function normalizePlatform(
   return undefined;
 }
 
+interface OnboardingFormState {
+  fullName: string;
+  email: string;
+  password: string;
+  companyName: string;
+  industry: string;
+  mainPlatform: string;
+  followers: string;
+  priceTier: PricingTier | null;
+  priceCurrency: string;
+}
+
 export default function OnboardingPage() {
   const router = useRouter();
   const params = useLocalSearchParams<{ type: "brand" | "influencer" }>();
@@ -48,7 +68,7 @@ export default function OnboardingPage() {
   const { setBrandProfile, setInfluencerProfile } = useUser();
 
   const [isLoading, setIsLoading] = useState(false);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<OnboardingFormState>({
     fullName: "",
     email: "",
     password: "",
@@ -56,9 +76,25 @@ export default function OnboardingPage() {
     industry: "",
     mainPlatform: "",
     followers: "",
+    priceTier: null,
+    priceCurrency: "EUR",
   });
 
   const registerMutation = trpc.users.register.useMutation();
+
+  const priceOptions = useMemo(
+    () =>
+      pricingTierOrder.map((tier) => {
+        const meta = PRICING_TIER_META[tier];
+        return {
+          tier,
+          rangeLabel: t(meta.rangeKey),
+          badgeLabel: t(PRICING_BADGE_LABEL_KEYS[meta.badge]),
+          colors: PRICING_BADGE_COLORS[meta.badge],
+        };
+      }),
+    [t]
+  );
 
   const handleSubmit = async () => {
     setIsLoading(true);
@@ -110,6 +146,8 @@ export default function OnboardingPage() {
         return;
       }
 
+      const normalizedCurrency = formData.priceCurrency.trim().toUpperCase();
+
       // Prepare payload for register mutation
       const payload = {
         role: userType, // "brand" | "influencer"
@@ -130,6 +168,11 @@ export default function OnboardingPage() {
         followers_count:
           userType === "influencer"
             ? parseInt(formData.followers || "0", 10) || 0
+            : undefined,
+        price_tier: userType === "influencer" ? formData.priceTier ?? undefined : undefined,
+        price_currency:
+          userType === "influencer" && normalizedCurrency
+            ? normalizedCurrency
             : undefined,
         password: formData.password || undefined,
       };
@@ -451,6 +494,70 @@ export default function OnboardingPage() {
                     })
                   }
                   keyboardType="number-pad"
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>{t("pricing.range")}</Text>
+                <View style={styles.priceOptions}>
+                  {priceOptions.map((option) => {
+                    const isSelected = formData.priceTier === option.tier;
+                    return (
+                      <Pressable
+                        key={option.tier}
+                        testID={`price-tier-${option.tier}`}
+                        style={[
+                          styles.priceOption,
+                          isSelected && styles.priceOptionActive,
+                        ]}
+                        onPress={() =>
+                          setFormData({
+                            ...formData,
+                            priceTier: option.tier,
+                          })
+                        }
+                      >
+                        <View style={styles.priceTexts}>
+                          <Text style={styles.priceRangeText}>{option.rangeLabel}</Text>
+                          <Text style={styles.priceSubText}>{t("pricing.currency")}</Text>
+                        </View>
+                        <View
+                          style={[
+                            styles.priceBadge,
+                            {
+                              backgroundColor: option.colors.background,
+                            },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.priceBadgeText,
+                              { color: option.colors.text },
+                            ]}
+                          >
+                            {option.badgeLabel}
+                          </Text>
+                        </View>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>{t("pricing.currency")}</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="EUR"
+                  value={formData.priceCurrency}
+                  autoCapitalize="characters"
+                  maxLength={8}
+                  onChangeText={(text) =>
+                    setFormData({
+                      ...formData,
+                      priceCurrency: text.toUpperCase(),
+                    })
+                  }
                 />
               </View>
             </>

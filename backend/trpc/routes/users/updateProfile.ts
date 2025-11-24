@@ -21,6 +21,8 @@ export default protectedProcedure
         .enum(["Instagram", "TikTok", "YouTube", "Facebook", "Snapchat"])
         .optional(),
       followers_count: z.number().int().nonnegative().optional(),
+      price_tier: z.enum(["UNDER_1000", "BETWEEN_1000_5000", "ABOVE_5000"]).optional(),
+      price_currency: z.string().min(1).max(10).optional(),
       expo_push_token: z.string().optional().nullable(),
     })
   )

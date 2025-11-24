@@ -37,6 +37,8 @@ export default protectedProcedure.query(async ({ ctx }) => {
     website: user.website,
     phone: user.phone,
     address: user.address,
+    pricing_tier: user.pricing_tier,
+    pricing_currency: user.pricing_currency,
     avatar_url: avatar_data_url || user.avatar_url,
     rating_avg: user.rating_avg,
     created_at: user.created_at,

@@ -15,6 +15,8 @@ export interface User {
   sector?: string;
   avatar_url?: string;
   default_currency?: string;
+  pricing_tier?: "UNDER_1000" | "BETWEEN_1000_5000" | "ABOVE_5000";
+  pricing_currency?: string;
   rating_avg?: number;
   instagram_url?: string;
   tiktok_url?: string;

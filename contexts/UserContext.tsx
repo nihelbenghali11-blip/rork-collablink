@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Platform } from "react-native";
 import * as Notifications from "expo-notifications";
 import { setTRPCUserId, trpc } from "@/lib/trpc";
+import { PricingTier, getBadgeFromTier } from "@/constants/pricing";
 
 export type UserType = "brand" | "influencer" | null;
 
@@ -35,7 +36,9 @@ export interface InfluencerProfile {
   bio?: string;
   engagementRate?: number;
   rating?: number;
-  priceIndex?: "accessible" | "standard" | "premium";
+  priceIndex?: "accessible" | "medium" | "premium";
+  pricingTier?: PricingTier;
+  pricingCurrency?: string;
   category?: "Fashion & Lifestyle" | "Technology & Gadgets" | "Fitness & Wellness" | "Food & Culinary" | "Beauty & Makeup" | "Travel & Adventure";
   instagramUrl?: string;
   tiktokUrl?: string;
@@ -55,14 +58,18 @@ export const [UserProvider, useUser] = createContextHook(() => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
 
-  useEffect(() => {
-    loadUserData();
+  const normalizeInfluencerProfile = useCallback((profile: InfluencerProfile): InfluencerProfile => {
+    const derivedBadge = profile.pricingTier ? getBadgeFromTier(profile.pricingTier) : null;
+    return {
+      ...profile,
+      priceIndex: derivedBadge ?? profile.priceIndex,
+    };
   }, []);
 
   const registerMutation = trpc.users.register.useMutation();
   const updateProfileMutation = trpc.users.updateProfile.useMutation();
 
-  const loadUserData = async () => {
+  const loadUserData = useCallback(async () => {
     try {
       const [storedType, storedProfile] = await Promise.all([
         AsyncStorage.getItem(USER_TYPE_KEY),
@@ -111,7 +118,7 @@ export const [UserProvider, useUser] = createContextHook(() => {
         if (type === "brand") {
           setBrandProfileState(profile);
         } else if (type === "influencer") {
-          setInfluencerProfileState(profile);
+          setInfluencerProfileState(normalizeInfluencerProfile(profile));
         }
         
         setIsAuthenticated(true);
@@ -121,7 +128,11 @@ export const [UserProvider, useUser] = createContextHook(() => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [registerMutation, normalizeInfluencerProfile]);
+
+  useEffect(() => {
+    loadUserData();
+  }, [loadUserData]);
 
   const setUserType = useCallback((type: UserType) => {
     setUserTypeState(type);
@@ -141,15 +152,16 @@ export const [UserProvider, useUser] = createContextHook(() => {
 
   const setInfluencerProfile = useCallback(async (profile: InfluencerProfile) => {
     try {
+      const normalized = normalizeInfluencerProfile(profile);
       await AsyncStorage.setItem(USER_TYPE_KEY, "influencer");
-      await AsyncStorage.setItem(USER_PROFILE_KEY, JSON.stringify(profile));
-      setInfluencerProfileState(profile);
+      await AsyncStorage.setItem(USER_PROFILE_KEY, JSON.stringify(normalized));
+      setInfluencerProfileState(normalized);
       setUserTypeState("influencer");
       setIsAuthenticated(true);
     } catch (error) {
       console.error("Failed to save influencer profile:", error);
     }
-  }, []);
+  }, [normalizeInfluencerProfile]);
 
   const logout = useCallback(async () => {
     try {

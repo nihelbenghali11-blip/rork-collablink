@@ -21,6 +21,8 @@ export default publicProcedure
       sector: user.sector,
       primary_platform: user.primary_platform,
       followers_count: user.followers_count ?? 0,
+      pricing_tier: user.pricing_tier,
+      pricing_currency: user.pricing_currency,
       created_at: user.created_at,
     };
   });

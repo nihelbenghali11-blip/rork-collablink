@@ -25,6 +25,9 @@ export default publicProcedure
       facebook_url: z.string().optional(),
       snapchat_url: z.string().optional(),
 
+      price_tier: z.enum(["UNDER_1000", "BETWEEN_1000_5000", "ABOVE_5000"]).optional(),
+      price_currency: z.string().min(1).max(10).optional(),
+
       website: z.string().optional(),
       phone: z.string().optional(),
       address: z.string().optional(),
@@ -87,6 +90,8 @@ export default publicProcedure
           tiktok_url: input.tiktok_url ?? null,
           facebook_url: input.facebook_url ?? null,
           snapchat_url: input.snapchat_url ?? null,
+          pricing_tier: input.price_tier ?? null,
+          pricing_currency: input.price_currency ?? null,
 
           // Brand-specific fields
           website: input.website ?? null,
