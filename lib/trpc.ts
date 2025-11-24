@@ -9,7 +9,7 @@ export const trpc = createTRPCReact<AppRouter>();
 
 // Backend base URL resolution for web, simulator, and devices
 export const getBaseUrl = () => {
-   return "https://towanda-proauthor-carlos.ngrok-free.dev";
+  return "https://towanda-proauthor-carlos.ngrok-free.dev"; // pas de slash !
 
 
 };
