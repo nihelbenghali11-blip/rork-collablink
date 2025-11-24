@@ -20,6 +20,7 @@ app.use(
       "x-user-id",
       "ngrok-skip-browser-warning",
       "trpc-batch-mode",
+      "trpc-source",
     ],
     exposeHeaders: ["Content-Length"],
     maxAge: 86400,
