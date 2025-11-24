@@ -1,11 +1,12 @@
 import { PrismaClient } from "./generated/prisma";
 
+import fs from "node:fs";
+import path from "node:path";
+
 (function ensureEnvLoaded() {
   try {
     if (typeof process !== "undefined") {
       // Try to load backend/.env manually without dotenv
-      const fs = require("fs");
-      const path = require("path");
       const envPath = path.resolve(process.cwd(), "backend/.env");
       if (fs.existsSync(envPath)) {
         const content = fs.readFileSync(envPath, "utf-8");

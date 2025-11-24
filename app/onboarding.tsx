@@ -21,7 +21,6 @@ import {
   PRICING_BADGE_LABEL_KEYS,
   PRICING_BADGE_COLORS,
   pricingTierOrder,
-  getBadgeFromTier,
 } from "@/constants/pricing";
 
 // Map free text to enum accepted by backend
@@ -660,6 +659,50 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     fontSize: 16,
     color: "#111827",
+  },
+  priceOptions: {
+    gap: 12,
+  },
+  priceOption: {
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 16,
+    padding: 16,
+    backgroundColor: "#FFFFFF",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  priceOptionActive: {
+    borderColor: "#6366F1",
+    shadowColor: "#6366F1",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 6,
+  },
+  priceTexts: {
+    flex: 1,
+    gap: 4,
+  },
+  priceRangeText: {
+    fontSize: 16,
+    fontWeight: "700" as const,
+    color: "#111827",
+  },
+  priceSubText: {
+    fontSize: 14,
+    color: "#6B7280",
+  },
+  priceBadge: {
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+  },
+  priceBadgeText: {
+    fontSize: 13,
+    fontWeight: "700" as const,
+    textTransform: "uppercase" as const,
   },
   submitButton: {
     backgroundColor: "#6366F1",
