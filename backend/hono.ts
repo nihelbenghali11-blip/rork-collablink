@@ -33,7 +33,21 @@ app.use("*", async (c, next) => {
   await next();
 });
 app.options("*", (c) => c.text("OK"));
-
+app.use(
+  "/trpc/*",
+  cors({
+    origin: (origin) => origin ?? "*",
+    credentials: true,
+    allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowHeaders: [
+      "Content-Type",
+      "Authorization",
+      "x-user-id",
+      "ngrok-skip-browser-warning",
+      "trpc-batch-mode",
+    ],
+  })
+);
 // tRPC mount
 app.use(
   "/trpc/*",
