@@ -11,7 +11,7 @@ const app = new Hono();
 app.use(
   "*",
   cors({
-    origin: "*", // allow all origins
+    origin: (origin) => origin ?? "*",
     credentials: true,
     allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowHeaders: [
@@ -20,7 +20,7 @@ app.use(
       "x-user-id",
       "ngrok-skip-browser-warning",
       "trpc-batch-mode",
-      "trpc-source",
+            "trpc-source",
     ],
     exposeHeaders: ["Content-Length"],
     maxAge: 86400,
@@ -32,6 +32,7 @@ app.use("*", async (c, next) => {
   console.log(`[Backend] ${c.req.method} ${c.req.url}`);
   await next();
 });
+app.options("*", (c) => c.text("OK"));
 
 // tRPC mount
 app.use(
